@@ -50,6 +50,7 @@ export interface FilterState {
   sources: FeedSource[];
   minDramaScore: number;
   breakingOnly: boolean;
+  bookmarksOnly: boolean;
   searchQuery: string;
 }
 

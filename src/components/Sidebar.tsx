@@ -2,15 +2,31 @@
 
 import { FeedItem } from "@/types";
 import { RSS_SOURCES, REDDIT_SOURCES } from "@/lib/feedSources";
-import { Radio, Rss, Globe, Settings, RefreshCw } from "lucide-react";
+import {
+  Radio,
+  Rss,
+  Globe,
+  RefreshCw,
+  Bell,
+  BellOff,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 
 interface SidebarProps {
   items: FeedItem[];
   isLoading: boolean;
   autoRefresh: boolean;
   lastUpdated: string | null;
+  notificationsEnabled: boolean;
+  soundEnabled: boolean;
   onRefresh: () => void;
   onToggleAutoRefresh: () => void;
+  onToggleNotifications: () => void;
+  onToggleSound: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export default function Sidebar({
@@ -18,8 +34,14 @@ export default function Sidebar({
   isLoading,
   autoRefresh,
   lastUpdated,
+  notificationsEnabled,
+  soundEnabled,
   onRefresh,
   onToggleAutoRefresh,
+  onToggleNotifications,
+  onToggleSound,
+  isOpen,
+  onClose,
 }: SidebarProps) {
   // Count items per source
   const sourceCounts = new Map<string, number>();
@@ -37,19 +59,32 @@ export default function Sidebar({
   const hnCount = items.filter((i) => i.sourceType === "hackernews").length;
 
   return (
-    <div className="w-56 flex-shrink-0 border-r border-zinc-800 overflow-y-auto bg-surface-raised/50">
+    <div
+      className={`
+        fixed inset-y-0 left-0 z-40 w-64 md:w-56 transform transition-transform duration-200 ease-in-out
+        md:relative md:translate-x-0 md:flex-shrink-0
+        border-r border-zinc-800 overflow-y-auto bg-surface-raised
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
+    >
       <div className="p-4">
-        {/* Logo */}
+        {/* Logo + close button */}
         <div className="flex items-center gap-2 mb-6">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <Radio className="w-4 h-4 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-sm font-bold text-white tracking-tight">
               PulseFeed
             </h1>
             <p className="text-[10px] text-zinc-500">AI & Gaming Radar</p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-surface-overlay text-zinc-500 md:hidden"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Refresh controls */}
@@ -65,21 +100,60 @@ export default function Sidebar({
             {isLoading ? "Fetching..." : "Refresh Now"}
           </button>
 
-          <button
-            onClick={onToggleAutoRefresh}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-              autoRefresh
-                ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                autoRefresh ? "bg-green-500 animate-pulse" : "bg-zinc-600"
+          <div className="flex gap-1.5">
+            {/* Auto-refresh toggle */}
+            <button
+              onClick={onToggleAutoRefresh}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                autoRefresh
+                  ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
               }`}
-            />
-            Auto-refresh {autoRefresh ? "ON" : "OFF"}
-          </button>
+              title="Toggle auto-refresh (r)"
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  autoRefresh ? "bg-green-500 animate-pulse" : "bg-zinc-600"
+                }`}
+              />
+              Auto
+            </button>
+
+            {/* Notifications toggle */}
+            <button
+              onClick={onToggleNotifications}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                notificationsEnabled
+                  ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
+              }`}
+              title="Toggle breaking news notifications"
+            >
+              {notificationsEnabled ? (
+                <Bell className="w-3 h-3" />
+              ) : (
+                <BellOff className="w-3 h-3" />
+              )}
+              Alerts
+            </button>
+
+            {/* Sound toggle */}
+            <button
+              onClick={onToggleSound}
+              className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                soundEnabled
+                  ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
+                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
+              }`}
+              title="Toggle sound"
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-3 h-3" />
+              ) : (
+                <VolumeX className="w-3 h-3" />
+              )}
+            </button>
+          </div>
 
           {lastUpdated && (
             <p className="text-[10px] text-zinc-600 text-center">
@@ -183,6 +257,13 @@ export default function Sidebar({
               <span className="ml-auto text-zinc-600">{hnCount}</span>
             </h3>
           </section>
+        </div>
+
+        {/* Keyboard hint */}
+        <div className="mt-6 pt-4 border-t border-zinc-800">
+          <p className="text-[10px] text-zinc-600 text-center">
+            Press <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono text-[9px]">?</kbd> for keyboard shortcuts
+          </p>
         </div>
       </div>
     </div>

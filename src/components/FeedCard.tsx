@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { FeedItem } from "@/types";
 import { categoryColor, timeAgo, formatNumber, dramaBarColor } from "@/lib/utils";
 import { dramaLevelEmoji } from "@/lib/scorer";
@@ -9,30 +10,70 @@ import {
   ExternalLink,
   Flame,
   Zap,
+  Bookmark,
 } from "lucide-react";
 
 interface FeedCardProps {
   item: FeedItem;
+  isRead: boolean;
+  isBookmarked: boolean;
+  isFocused: boolean;
+  onMarkRead: (id: string) => void;
+  onToggleBookmark: (id: string) => void;
 }
 
-export default function FeedCard({ item }: FeedCardProps) {
+export default function FeedCard({
+  item,
+  isRead,
+  isBookmarked,
+  isFocused,
+  onMarkRead,
+  onToggleBookmark,
+}: FeedCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const hasEngagement =
     (item.engagement.comments ?? 0) > 0 ||
     (item.engagement.upvotes ?? 0) > 0 ||
     (item.engagement.score ?? 0) > 0;
 
+  // Auto-scroll focused card into view
+  useEffect(() => {
+    if (isFocused && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [isFocused]);
+
+  const handleCardClick = () => {
+    onMarkRead(item.id);
+    window.open(item.url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleBookmark(item.id);
+  };
+
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`group block rounded-xl border bg-surface-raised p-4 transition-all duration-200 hover:bg-surface-overlay hover:border-zinc-600 animate-slide-in ${
-        item.isBreaking
-          ? "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
-          : item.dramaScore >= 35
-            ? "border-orange-500/30"
-            : "border-zinc-800"
-      }`}
+    <div
+      ref={cardRef}
+      role="article"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleCardClick();
+      }}
+      className={`group block rounded-xl border bg-surface-raised p-4 transition-all duration-200 cursor-pointer
+        hover:bg-surface-overlay hover:border-zinc-600 animate-slide-in
+        ${isFocused ? "ring-2 ring-indigo-500/60 border-indigo-500/40" : ""}
+        ${isRead ? "opacity-55" : ""}
+        ${
+          item.isBreaking
+            ? "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+            : item.dramaScore >= 35
+              ? "border-orange-500/30"
+              : "border-zinc-800"
+        }`}
     >
       {/* Breaking badge */}
       {item.isBreaking && (
@@ -49,6 +90,10 @@ export default function FeedCard({ item }: FeedCardProps) {
         <div className="flex-1 min-w-0">
           {/* Source + time row */}
           <div className="flex items-center gap-2 mb-1.5">
+            {/* Unread dot */}
+            {!isRead && (
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />
+            )}
             <span
               className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${categoryColor(
                 item.category
@@ -94,7 +139,7 @@ export default function FeedCard({ item }: FeedCardProps) {
             </div>
           )}
 
-          {/* Bottom row: engagement + drama */}
+          {/* Bottom row: engagement + drama + actions */}
           <div className="flex items-center gap-3">
             {hasEngagement && (
               <div className="flex items-center gap-3 text-zinc-500">
@@ -143,13 +188,28 @@ export default function FeedCard({ item }: FeedCardProps) {
               </div>
             )}
 
-            <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+            {/* Bookmark button */}
+            <button
+              onClick={handleBookmarkClick}
+              className={`p-1 rounded transition-all ml-auto ${
+                isBookmarked
+                  ? "text-amber-400 hover:text-amber-300"
+                  : "text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-400"
+              } ${isBookmarked ? "opacity-100" : ""}`}
+              title={isBookmarked ? "Remove bookmark" : "Bookmark"}
+            >
+              <Bookmark
+                className={`w-3.5 h-3.5 ${isBookmarked ? "fill-current" : ""}`}
+              />
+            </button>
+
+            <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
 
         {/* Thumbnail */}
         {item.imageUrl && (
-          <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-800">
+          <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-zinc-800">
             <img
               src={item.imageUrl}
               alt=""
@@ -162,6 +222,6 @@ export default function FeedCard({ item }: FeedCardProps) {
           </div>
         )}
       </div>
-    </a>
+    </div>
   );
 }

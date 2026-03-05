@@ -3,10 +3,12 @@
 import { FeedItem, TrendingTopic } from "@/types";
 import { dramaLevelEmoji, dramaLevelColor } from "@/lib/scorer";
 import { categoryColor, formatNumber, timeAgo } from "@/lib/utils";
-import { TrendingUp, Flame, Clock, ExternalLink } from "lucide-react";
+import { TrendingUp, Flame, Clock, X } from "lucide-react";
 
 interface TrendingPanelProps {
   items: FeedItem[];
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 function extractTrending(items: FeedItem[]): TrendingTopic[] {
@@ -52,7 +54,7 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
     });
 }
 
-export default function TrendingPanel({ items }: TrendingPanelProps) {
+export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelProps) {
   const trending = extractTrending(items);
   const topDrama = [...items]
     .filter((i) => i.dramaScore >= 25)
@@ -69,8 +71,26 @@ export default function TrendingPanel({ items }: TrendingPanelProps) {
     .slice(0, 5);
 
   return (
-    <div className="w-80 flex-shrink-0 border-l border-zinc-800 overflow-y-auto bg-surface-raised/50">
+    <div
+      className={`
+        fixed inset-y-0 right-0 z-40 w-80 transform transition-transform duration-200 ease-in-out
+        md:relative md:translate-x-0 md:flex-shrink-0
+        border-l border-zinc-800 overflow-y-auto bg-surface-raised
+        ${isOpen ? "translate-x-0" : "translate-x-full"}
+      `}
+    >
       <div className="p-4 space-y-6">
+        {/* Mobile close button */}
+        <div className="flex items-center justify-between md:hidden">
+          <span className="text-xs font-semibold text-zinc-300">Trending & Drama</span>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-surface-overlay text-zinc-500"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Trending Topics */}
         <section>
           <div className="flex items-center gap-2 mb-3">

@@ -1,31 +1,92 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { FeedItem, FilterState } from "@/types";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
+import { useNotifications, requestNotificationPermission } from "@/hooks/useNotifications";
+import {
+  loadFilters,
+  saveFilters,
+  loadReadItems,
+  saveReadItems,
+  loadBookmarkedItems,
+  saveBookmarkedItems,
+  loadBookmarkIds,
+  loadSettings,
+  saveSettings,
+  UserSettings,
+} from "@/lib/storage";
 import FeedCard from "./FeedCard";
 import FilterBar from "./FilterBar";
 import BreakingTicker from "./BreakingTicker";
 import TrendingPanel from "./TrendingPanel";
 import Sidebar from "./Sidebar";
 import LiveIndicator from "./LiveIndicator";
+import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
+import { Menu, TrendingUp, CheckCheck } from "lucide-react";
 
 const DEFAULT_FILTERS: FilterState = {
   categories: [],
   sources: [],
   minDramaScore: 0,
   breakingOnly: false,
+  bookmarksOnly: false,
   searchQuery: "",
 };
 
 export default function Dashboard() {
+  // ── Core feed state ──
   const [items, setItems] = useState<FeedItem[]>([]);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Persisted settings ──
+  const [settings, setSettings] = useState<UserSettings>({
+    autoRefresh: true,
+    notificationsEnabled: false,
+    soundEnabled: true,
+  });
+
+  // ── Read/Unread tracking ──
+  const [readItems, setReadItems] = useState<Set<string>>(new Set());
+
+  // ── Bookmarks (full item data persisted) ──
+  const [bookmarkedItems, setBookmarkedItems] = useState<FeedItem[]>([]);
+  const [bookmarkIds, setBookmarkIds] = useState<Set<string>>(new Set());
+
+  // ── Mobile sidebar toggles ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [trendingOpen, setTrendingOpen] = useState(false);
+
+  // ── Keyboard help ──
+  const [showHelp, setShowHelp] = useState(false);
+
+  // ── Search ref for keyboard shortcut ──
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // ── Load persisted state on mount ──
+  useEffect(() => {
+    setFilters(loadFilters(DEFAULT_FILTERS));
+    setReadItems(loadReadItems());
+    setBookmarkedItems(loadBookmarkedItems());
+    setBookmarkIds(loadBookmarkIds());
+    setSettings(loadSettings());
+  }, []);
+
+  // ── Persist filters on change ──
+  useEffect(() => {
+    saveFilters(filters);
+  }, [filters]);
+
+  // ── Persist settings on change ──
+  useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
+
+  // ── Fetch feeds ──
   const fetchFeeds = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -49,64 +110,195 @@ export default function Dashboard() {
   }, [fetchFeeds]);
 
   // Auto-refresh every 2 minutes
-  useAutoRefresh(fetchFeeds, 120_000, autoRefresh);
+  useAutoRefresh(fetchFeeds, 120_000, settings.autoRefresh);
 
-  // Filter items
-  const filteredItems = items.filter((item) => {
-    if (filters.searchQuery) {
-      const q = filters.searchQuery.toLowerCase();
+  // ── Notifications ──
+  useNotifications(items, settings.notificationsEnabled, settings.soundEnabled);
+
+  // ── Read/Unread handlers ──
+  const markAsRead = useCallback((id: string) => {
+    setReadItems((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      saveReadItems(next);
+      return next;
+    });
+  }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setReadItems((prev) => {
+      const next = new Set(prev);
+      for (const item of items) {
+        next.add(item.id);
+      }
+      saveReadItems(next);
+      return next;
+    });
+  }, [items]);
+
+  // ── Bookmark handlers ──
+  const toggleBookmark = useCallback(
+    (id: string) => {
+      setBookmarkedItems((prev) => {
+        let next: FeedItem[];
+        if (prev.some((i) => i.id === id)) {
+          next = prev.filter((i) => i.id !== id);
+        } else {
+          const item = items.find((i) => i.id === id);
+          if (item) {
+            next = [...prev, item];
+          } else {
+            next = prev;
+          }
+        }
+        saveBookmarkedItems(next);
+        setBookmarkIds(new Set(next.map((i) => i.id)));
+        return next;
+      });
+    },
+    [items]
+  );
+
+  // ── Settings handlers ──
+  const toggleAutoRefresh = useCallback(() => {
+    setSettings((prev) => ({ ...prev, autoRefresh: !prev.autoRefresh }));
+  }, []);
+
+  const toggleNotifications = useCallback(async () => {
+    if (!settings.notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        setSettings((prev) => ({ ...prev, notificationsEnabled: true }));
+      }
+    } else {
+      setSettings((prev) => ({ ...prev, notificationsEnabled: false }));
+    }
+  }, [settings.notificationsEnabled]);
+
+  const toggleSound = useCallback(() => {
+    setSettings((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+  }, []);
+
+  // ── Filter items ──
+  const getFilteredItems = useCallback(() => {
+    // If bookmarks mode, use bookmarked items instead of feed items
+    const sourceItems = filters.bookmarksOnly ? bookmarkedItems : items;
+
+    return sourceItems.filter((item) => {
+      if (filters.searchQuery) {
+        const q = filters.searchQuery.toLowerCase();
+        if (
+          !item.title.toLowerCase().includes(q) &&
+          !item.summary.toLowerCase().includes(q) &&
+          !item.source.toLowerCase().includes(q) &&
+          !item.tags.some((t) => t.toLowerCase().includes(q))
+        ) {
+          return false;
+        }
+      }
+
       if (
-        !item.title.toLowerCase().includes(q) &&
-        !item.summary.toLowerCase().includes(q) &&
-        !item.source.toLowerCase().includes(q) &&
-        !item.tags.some((t) => t.toLowerCase().includes(q))
+        filters.categories.length > 0 &&
+        !filters.categories.includes(item.category)
       ) {
         return false;
       }
-    }
 
-    if (
-      filters.categories.length > 0 &&
-      !filters.categories.includes(item.category)
-    ) {
-      return false;
-    }
+      if (
+        filters.sources.length > 0 &&
+        !filters.sources.includes(item.sourceType)
+      ) {
+        return false;
+      }
 
-    if (
-      filters.sources.length > 0 &&
-      !filters.sources.includes(item.sourceType)
-    ) {
-      return false;
-    }
+      if (filters.breakingOnly && !item.isBreaking) {
+        return false;
+      }
 
-    if (filters.breakingOnly && !item.isBreaking) {
-      return false;
-    }
+      if (item.dramaScore < filters.minDramaScore) {
+        return false;
+      }
 
-    if (item.dramaScore < filters.minDramaScore) {
-      return false;
-    }
+      return true;
+    });
+  }, [items, bookmarkedItems, filters]);
 
-    return true;
-  });
-
+  const filteredItems = getFilteredItems();
   const breakingItems = items.filter((i) => i.isBreaking);
   const dramaItems = items.filter((i) => i.dramaScore >= 35);
 
+  // ── Keyboard navigation ──
+  const { focusedIndex } = useKeyboardNavigation(filteredItems.length, {
+    onOpen: (index) => {
+      const item = filteredItems[index];
+      if (item) {
+        markAsRead(item.id);
+        window.open(item.url, "_blank", "noopener,noreferrer");
+      }
+    },
+    onRefresh: fetchFeeds,
+    onFocusSearch: () => searchRef.current?.focus(),
+    onBookmark: (index) => {
+      const item = filteredItems[index];
+      if (item) toggleBookmark(item.id);
+    },
+    onMarkAllRead: markAllAsRead,
+    onToggleHelp: () => setShowHelp((v) => !v),
+  });
+
   return (
     <div className="flex h-screen bg-surface text-zinc-100 overflow-hidden">
+      {/* Mobile overlay backdrop */}
+      {(sidebarOpen || trendingOpen) && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => {
+            setSidebarOpen(false);
+            setTrendingOpen(false);
+          }}
+        />
+      )}
+
       {/* Left Sidebar */}
       <Sidebar
         items={items}
         isLoading={isLoading}
-        autoRefresh={autoRefresh}
+        autoRefresh={settings.autoRefresh}
         lastUpdated={lastUpdated}
+        notificationsEnabled={settings.notificationsEnabled}
+        soundEnabled={settings.soundEnabled}
         onRefresh={fetchFeeds}
-        onToggleAutoRefresh={() => setAutoRefresh(!autoRefresh)}
+        onToggleAutoRefresh={toggleAutoRefresh}
+        onToggleNotifications={toggleNotifications}
+        onToggleSound={toggleSound}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile top bar */}
+        <div className="flex items-center justify-between px-3 py-2 md:hidden border-b border-zinc-800 bg-surface-raised">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-surface-overlay text-zinc-400"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <span className="text-[10px] text-white font-bold">P</span>
+            </div>
+            <span className="text-xs font-bold text-white">PulseFeed</span>
+          </div>
+          <button
+            onClick={() => setTrendingOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-surface-overlay text-zinc-400"
+          >
+            <TrendingUp className="w-5 h-5" />
+          </button>
+        </div>
+
         {/* Breaking Ticker */}
         <BreakingTicker items={breakingItems} />
 
@@ -117,20 +309,32 @@ export default function Dashboard() {
           totalItems={filteredItems.length}
           dramaItems={dramaItems.length}
           breakingItems={breakingItems.length}
+          bookmarkCount={bookmarkedItems.length}
+          searchRef={searchRef}
         />
 
         {/* Feed */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto p-4">
+          <div className="max-w-3xl mx-auto p-3 md:p-4">
             {/* Status bar */}
             <div className="flex items-center justify-between mb-4">
               <LiveIndicator
-                isLive={autoRefresh}
+                isLive={settings.autoRefresh}
                 itemCount={items.length}
               />
-              {error && (
-                <span className="text-xs text-red-400">{error}</span>
-              )}
+              <div className="flex items-center gap-2">
+                {error && (
+                  <span className="text-xs text-red-400">{error}</span>
+                )}
+                <button
+                  onClick={markAllAsRead}
+                  className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                  title="Mark all as read (m)"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Mark all read</span>
+                </button>
+              </div>
             </div>
 
             {/* Loading state */}
@@ -159,7 +363,9 @@ export default function Dashboard() {
             {!isLoading && filteredItems.length === 0 && items.length > 0 && (
               <div className="text-center py-16">
                 <p className="text-zinc-500 text-sm">
-                  No items match your filters.
+                  {filters.bookmarksOnly
+                    ? "No bookmarked items yet. Click the bookmark icon on any card to save it."
+                    : "No items match your filters."}
                 </p>
                 <button
                   onClick={() => setFilters(DEFAULT_FILTERS)}
@@ -172,8 +378,16 @@ export default function Dashboard() {
 
             {/* Feed items */}
             <div className="space-y-3">
-              {filteredItems.map((item) => (
-                <FeedCard key={item.id} item={item} />
+              {filteredItems.map((item, index) => (
+                <FeedCard
+                  key={item.id}
+                  item={item}
+                  isRead={readItems.has(item.id)}
+                  isBookmarked={bookmarkIds.has(item.id)}
+                  isFocused={focusedIndex === index}
+                  onMarkRead={markAsRead}
+                  onToggleBookmark={toggleBookmark}
+                />
               ))}
             </div>
 
@@ -184,7 +398,17 @@ export default function Dashboard() {
       </div>
 
       {/* Right Panel - Trending */}
-      <TrendingPanel items={items} />
+      <TrendingPanel
+        items={items}
+        isOpen={trendingOpen}
+        onClose={() => setTrendingOpen(false)}
+      />
+
+      {/* Keyboard shortcuts help modal */}
+      <KeyboardShortcutsHelp
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+      />
     </div>
   );
 }

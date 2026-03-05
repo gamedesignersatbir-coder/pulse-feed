@@ -31,6 +31,17 @@ export function useKeyboardShortcut(
 ) {
   const handler = useCallback(
     (e: KeyboardEvent) => {
+      // Skip if user is typing in an input or textarea (except Escape)
+      const target = e.target as HTMLElement;
+      if (
+        key.toLowerCase() !== "escape" &&
+        (target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (
         e.key.toLowerCase() === key.toLowerCase() &&
         (!modifiers.ctrl || e.ctrlKey || e.metaKey) &&
