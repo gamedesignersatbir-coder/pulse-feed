@@ -24,6 +24,9 @@ const SOURCES: { value: FeedSource; label: string }[] = [
   { value: "rss", label: "News" },
   { value: "reddit", label: "Reddit" },
   { value: "hackernews", label: "HN" },
+  { value: "bluesky", label: "Bsky" },
+  { value: "github", label: "GitHub" },
+  { value: "steam", label: "Steam" },
 ];
 
 export default function FilterBar({

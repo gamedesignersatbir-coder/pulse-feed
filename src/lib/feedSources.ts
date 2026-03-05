@@ -264,10 +264,46 @@ export const HACKERNEWS_SOURCE: FeedSourceConfig = {
   enabled: true,
 };
 
+export const BLUESKY_SOURCE: FeedSourceConfig = {
+  id: "bluesky",
+  name: "Bluesky",
+  url: "https://public.api.bsky.app",
+  type: "bluesky",
+  category: "social",
+  icon: "BS",
+  color: "#0085ff",
+  enabled: true,
+};
+
+export const GITHUB_SOURCE: FeedSourceConfig = {
+  id: "github-trending",
+  name: "GitHub Trending",
+  url: "https://api.github.com",
+  type: "github",
+  category: "ai",
+  icon: "GH",
+  color: "#8b5cf6",
+  enabled: true,
+};
+
+export const STEAM_SOURCE: FeedSourceConfig = {
+  id: "steam-news",
+  name: "Steam News",
+  url: "https://api.steampowered.com",
+  type: "steam",
+  category: "gaming",
+  icon: "ST",
+  color: "#1b2838",
+  enabled: true,
+};
+
 export function getAllEnabledSources(): FeedSourceConfig[] {
   return [
     ...RSS_SOURCES.filter((s) => s.enabled),
     ...REDDIT_SOURCES.filter((s) => s.enabled),
     ...(HACKERNEWS_SOURCE.enabled ? [HACKERNEWS_SOURCE] : []),
+    ...(BLUESKY_SOURCE.enabled ? [BLUESKY_SOURCE] : []),
+    ...(GITHUB_SOURCE.enabled ? [GITHUB_SOURCE] : []),
+    ...(STEAM_SOURCE.enabled ? [STEAM_SOURCE] : []),
   ];
 }

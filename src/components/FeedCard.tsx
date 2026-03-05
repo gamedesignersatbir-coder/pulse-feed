@@ -118,8 +118,20 @@ export default function FeedCard({
             {item.title}
           </h3>
 
+          {/* AI Summary */}
+          {item.aiSummary && (
+            <div className="flex items-start gap-1.5 mb-1.5 px-2 py-1 rounded-md bg-indigo-500/5 border border-indigo-500/10">
+              <span className="text-[9px] font-bold text-indigo-400 bg-indigo-500/20 px-1 py-0.5 rounded flex-shrink-0 mt-px">
+                AI
+              </span>
+              <p className="text-[11px] text-indigo-300/80 leading-snug">
+                {item.aiSummary}
+              </p>
+            </div>
+          )}
+
           {/* Summary */}
-          {item.summary && (
+          {item.summary && !item.aiSummary && (
             <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-2">
               {item.summary}
             </p>

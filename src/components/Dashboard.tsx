@@ -17,6 +17,7 @@ import {
   saveSettings,
   UserSettings,
 } from "@/lib/storage";
+import { storeItems, pruneOldItems } from "@/lib/itemHistory";
 import FeedCard from "./FeedCard";
 import FilterBar from "./FilterBar";
 import BreakingTicker from "./BreakingTicker";
@@ -24,6 +25,8 @@ import TrendingPanel from "./TrendingPanel";
 import Sidebar from "./Sidebar";
 import LiveIndicator from "./LiveIndicator";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
+import SettingsPanel from "./SettingsPanel";
+import HistorySearch from "./HistorySearch";
 import { Menu, TrendingUp, CheckCheck } from "lucide-react";
 
 const DEFAULT_FILTERS: FilterState = {
@@ -61,8 +64,10 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [trendingOpen, setTrendingOpen] = useState(false);
 
-  // ── Keyboard help ──
+  // ── Modals ──
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // ── Search ref for keyboard shortcut ──
   const searchRef = useRef<HTMLInputElement>(null);
@@ -74,6 +79,8 @@ export default function Dashboard() {
     setBookmarkedItems(loadBookmarkedItems());
     setBookmarkIds(loadBookmarkIds());
     setSettings(loadSettings());
+    // Prune old history items on mount
+    pruneOldItems().catch(() => {});
   }, []);
 
   // ── Persist filters on change ──
@@ -86,6 +93,44 @@ export default function Dashboard() {
     saveSettings(settings);
   }, [settings]);
 
+  // ── AI Summarization ──
+  const fetchSummaries = useCallback(async (feedItems: FeedItem[]) => {
+    try {
+      const unsummarized = feedItems
+        .filter((item) => !item.aiSummary)
+        .slice(0, 10)
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+        }));
+
+      if (unsummarized.length === 0) return;
+
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: unsummarized }),
+      });
+
+      if (!res.ok) return;
+      const data = await res.json();
+      const summaries: Record<string, string> = data.summaries || {};
+
+      if (Object.keys(summaries).length > 0) {
+        setItems((prev) =>
+          prev.map((item) =>
+            summaries[item.id]
+              ? { ...item, aiSummary: summaries[item.id] }
+              : item
+          )
+        );
+      }
+    } catch {
+      // AI summarization is optional — fail silently
+    }
+  }, []);
+
   // ── Fetch feeds ──
   const fetchFeeds = useCallback(async () => {
     try {
@@ -94,15 +139,22 @@ export default function Dashboard() {
       const res = await fetch("/api/feeds");
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setItems(data.items || []);
+      const feedItems: FeedItem[] = data.items || [];
+      setItems(feedItems);
       setLastUpdated(data.meta?.fetchedAt || new Date().toISOString());
+
+      // Store items in IndexedDB for history
+      storeItems(feedItems).catch(() => {});
+
+      // Fire off AI summarization in the background
+      fetchSummaries(feedItems);
     } catch (err) {
       setError("Failed to load feeds. Retrying...");
       console.error("Fetch error:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchSummaries]);
 
   // Initial fetch
   useEffect(() => {
@@ -181,7 +233,6 @@ export default function Dashboard() {
 
   // ── Filter items ──
   const getFilteredItems = useCallback(() => {
-    // If bookmarks mode, use bookmarked items instead of feed items
     const sourceItems = filters.bookmarksOnly ? bookmarkedItems : items;
 
     return sourceItems.filter((item) => {
@@ -271,6 +322,8 @@ export default function Dashboard() {
         onToggleAutoRefresh={toggleAutoRefresh}
         onToggleNotifications={toggleNotifications}
         onToggleSound={toggleSound}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenHistory={() => setShowHistory(true)}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -408,6 +461,18 @@ export default function Dashboard() {
       <KeyboardShortcutsHelp
         isOpen={showHelp}
         onClose={() => setShowHelp(false)}
+      />
+
+      {/* Settings panel modal */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      {/* History search modal */}
+      <HistorySearch
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
       />
     </div>
   );

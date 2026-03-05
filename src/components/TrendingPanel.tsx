@@ -1,14 +1,41 @@
 "use client";
 
-import { FeedItem, TrendingTopic } from "@/types";
+import { FeedItem, TrendingTopic, TrendVelocity, DramaLevel } from "@/types";
 import { dramaLevelEmoji, dramaLevelColor } from "@/lib/scorer";
 import { categoryColor, formatNumber, timeAgo } from "@/lib/utils";
-import { TrendingUp, Flame, Clock, X } from "lucide-react";
+import { loadTrendingSnapshot, saveTrendingSnapshot } from "@/lib/storage";
+import { TrendingUp, TrendingDown, Minus, Sparkles, Flame, Clock, X } from "lucide-react";
 
 interface TrendingPanelProps {
   items: FeedItem[];
   isOpen: boolean;
   onClose: () => void;
+}
+
+function getVelocityIcon(velocity: TrendVelocity) {
+  switch (velocity) {
+    case "rising":
+      return <TrendingUp className="w-3 h-3 text-green-400" />;
+    case "falling":
+      return <TrendingDown className="w-3 h-3 text-red-400" />;
+    case "new":
+      return <Sparkles className="w-3 h-3 text-amber-400" />;
+    default:
+      return <Minus className="w-3 h-3 text-zinc-600" />;
+  }
+}
+
+function getVelocityLabel(velocity: TrendVelocity): string {
+  switch (velocity) {
+    case "rising":
+      return "Rising";
+    case "falling":
+      return "Cooling";
+    case "new":
+      return "New";
+    default:
+      return "";
+  }
 }
 
 function extractTrending(items: FeedItem[]): TrendingTopic[] {
@@ -23,7 +50,16 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
     }
   }
 
-  return Array.from(topicCounts.entries())
+  // Load previous snapshot for velocity comparison
+  let prevTopics: Record<string, number> = {};
+  try {
+    const prevSnapshot = loadTrendingSnapshot();
+    prevTopics = prevSnapshot?.topics ?? {};
+  } catch {
+    // Storage not available (SSR) — skip velocity
+  }
+
+  const trending = Array.from(topicCounts.entries())
     .filter(([, data]) => data.count >= 2)
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
@@ -37,21 +73,51 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
             categories.filter((c) => c === a).length
         )[0] ?? "general";
 
+      const previousMentions = prevTopics[topic] ?? 0;
+      let velocity: TrendVelocity = "stable";
+      if (previousMentions === 0) {
+        velocity = "new";
+      } else if (data.count > previousMentions * 1.3) {
+        velocity = "rising";
+      } else if (data.count < previousMentions * 0.7) {
+        velocity = "falling";
+      }
+
+      const dramaLevel: DramaLevel =
+        maxDrama >= 60
+          ? "nuclear"
+          : maxDrama >= 35
+            ? "spicy"
+            : maxDrama >= 15
+              ? "mild"
+              : "none";
+
       return {
         topic,
         mentions: data.count,
         category: primaryCategory,
-        dramaLevel:
-          maxDrama >= 60
-            ? "nuclear"
-            : maxDrama >= 35
-              ? "spicy"
-              : maxDrama >= 15
-                ? "mild"
-                : ("none" as const),
+        dramaLevel,
         relatedItems: data.items.map((i) => i.id),
+        velocity,
+        previousMentions,
       };
     });
+
+  // Save current snapshot for next comparison
+  try {
+    const currentTopics: Record<string, number> = {};
+    Array.from(topicCounts.entries()).forEach(([topic, data]) => {
+      currentTopics[topic] = data.count;
+    });
+    saveTrendingSnapshot({
+      timestamp: new Date().toISOString(),
+      topics: currentTopics,
+    });
+  } catch {
+    // Storage not available
+  }
+
+  return trending;
 }
 
 export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelProps) {
@@ -124,9 +190,28 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-zinc-500">
-                      {topic.mentions} mentions
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-500">
+                        {topic.mentions} mentions
+                      </span>
+                      {/* Velocity indicator */}
+                      {topic.velocity !== "stable" && (
+                        <span className="flex items-center gap-0.5">
+                          {getVelocityIcon(topic.velocity)}
+                          <span
+                            className={`text-[9px] font-medium ${
+                              topic.velocity === "rising"
+                                ? "text-green-400"
+                                : topic.velocity === "falling"
+                                  ? "text-red-400"
+                                  : "text-amber-400"
+                            }`}
+                          >
+                            {getVelocityLabel(topic.velocity)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded border ${categoryColor(

@@ -10,6 +10,7 @@ const KEYS = {
   bookmarks: `${PREFIX}bookmarks_v1`,
   bookmarkedItems: `${PREFIX}bookmarked_items_v1`,
   settings: `${PREFIX}settings_v1`,
+  trendingSnapshot: `${PREFIX}trending_snapshot_v1`,
 } as const;
 
 export interface UserSettings {
@@ -91,4 +92,19 @@ export function loadSettings(): UserSettings {
 
 export function saveSettings(settings: UserSettings): void {
   save(KEYS.settings, settings);
+}
+
+// ── Trending snapshot (for velocity tracking) ──
+
+export interface TrendingSnapshot {
+  timestamp: string;
+  topics: Record<string, number>; // topic → mention count
+}
+
+export function loadTrendingSnapshot(): TrendingSnapshot | null {
+  return load<TrendingSnapshot | null>(KEYS.trendingSnapshot, null);
+}
+
+export function saveTrendingSnapshot(snapshot: TrendingSnapshot): void {
+  save(KEYS.trendingSnapshot, snapshot);
 }

@@ -12,6 +12,10 @@ import {
   Volume2,
   VolumeX,
   X,
+  Settings,
+  History,
+  Github,
+  Gamepad2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -25,6 +29,8 @@ interface SidebarProps {
   onToggleAutoRefresh: () => void;
   onToggleNotifications: () => void;
   onToggleSound: () => void;
+  onOpenSettings: () => void;
+  onOpenHistory: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -40,6 +46,8 @@ export default function Sidebar({
   onToggleAutoRefresh,
   onToggleNotifications,
   onToggleSound,
+  onOpenSettings,
+  onOpenHistory,
   isOpen,
   onClose,
 }: SidebarProps) {
@@ -57,6 +65,9 @@ export default function Sidebar({
   ).length;
   const redditCount = items.filter((i) => i.sourceType === "reddit").length;
   const hnCount = items.filter((i) => i.sourceType === "hackernews").length;
+  const blueskyCount = items.filter((i) => i.sourceType === "bluesky").length;
+  const githubCount = items.filter((i) => i.sourceType === "github").length;
+  const steamCount = items.filter((i) => i.sourceType === "steam").length;
 
   return (
     <div
@@ -162,6 +173,26 @@ export default function Sidebar({
           )}
         </div>
 
+        {/* Settings + History buttons */}
+        <div className="mb-6 flex gap-1.5">
+          <button
+            onClick={onOpenSettings}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800/50 border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 transition-all"
+            title="Manage sources"
+          >
+            <Settings className="w-3 h-3" />
+            Sources
+          </button>
+          <button
+            onClick={onOpenHistory}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800/50 border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 transition-all"
+            title="Search topic history"
+          >
+            <History className="w-3 h-3" />
+            History
+          </button>
+        </div>
+
         {/* Source sections */}
         <div className="space-y-4">
           {/* AI News */}
@@ -257,6 +288,39 @@ export default function Sidebar({
               <span className="ml-auto text-zinc-600">{hnCount}</span>
             </h3>
           </section>
+
+          {/* Bluesky */}
+          {blueskyCount > 0 && (
+            <section>
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+                <Globe className="w-3 h-3" />
+                Bluesky
+                <span className="ml-auto text-zinc-600">{blueskyCount}</span>
+              </h3>
+            </section>
+          )}
+
+          {/* GitHub Trending */}
+          {githubCount > 0 && (
+            <section>
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+                <Github className="w-3 h-3" />
+                GitHub Trending
+                <span className="ml-auto text-zinc-600">{githubCount}</span>
+              </h3>
+            </section>
+          )}
+
+          {/* Steam News */}
+          {steamCount > 0 && (
+            <section>
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+                <Gamepad2 className="w-3 h-3" />
+                Steam News
+                <span className="ml-auto text-zinc-600">{steamCount}</span>
+              </h3>
+            </section>
+          )}
         </div>
 
         {/* Keyboard hint */}

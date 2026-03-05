@@ -4,7 +4,12 @@ export type FeedSource =
   | "rss"
   | "reddit"
   | "twitter"
-  | "hackernews";
+  | "hackernews"
+  | "bluesky"
+  | "github"
+  | "steam";
+
+export type TrendVelocity = "rising" | "stable" | "falling" | "new";
 
 export type DramaLevel = "none" | "mild" | "spicy" | "nuclear";
 
@@ -24,6 +29,7 @@ export interface FeedItem {
   dramaLevel: DramaLevel;
   isBreaking: boolean;
   tags: string[];
+  aiSummary?: string;
 }
 
 export interface EngagementMetrics {
@@ -60,6 +66,8 @@ export interface TrendingTopic {
   category: FeedCategory;
   dramaLevel: DramaLevel;
   relatedItems: string[]; // FeedItem IDs
+  velocity: TrendVelocity;
+  previousMentions: number;
 }
 
 export interface AppState {

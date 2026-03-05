@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { FeedItem } from "@/types";
 import { RSS_SOURCES, REDDIT_SOURCES } from "@/lib/feedSources";
 import { fetchRSSFeed, fetchRedditFeed, fetchHackerNews } from "@/lib/rssParser";
+import { fetchBlueskyFeeds } from "@/lib/blueskyParser";
+import { fetchGithubTrending } from "@/lib/githubTrending";
+import { fetchSteamNews } from "@/lib/steamParser";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -11,18 +14,25 @@ export async function GET() {
     const enabledRss = RSS_SOURCES.filter((s) => s.enabled);
     const enabledReddit = REDDIT_SOURCES.filter((s) => s.enabled);
 
-    // Fetch all sources in parallel
-    const [rssResults, redditResults, hnResults] = await Promise.all([
-      Promise.all(enabledRss.map((source) => fetchRSSFeed(source))),
-      Promise.all(enabledReddit.map((source) => fetchRedditFeed(source))),
-      fetchHackerNews(),
-    ]);
+    // Fetch all sources in parallel (including new Phase 3 sources)
+    const [rssResults, redditResults, hnResults, blueskyResults, githubResults, steamResults] =
+      await Promise.all([
+        Promise.all(enabledRss.map((source) => fetchRSSFeed(source))),
+        Promise.all(enabledReddit.map((source) => fetchRedditFeed(source))),
+        fetchHackerNews(),
+        fetchBlueskyFeeds(),
+        fetchGithubTrending(),
+        fetchSteamNews(),
+      ]);
 
     // Flatten all results
     const allItems: FeedItem[] = [
       ...rssResults.flat(),
       ...redditResults.flat(),
       ...hnResults,
+      ...blueskyResults,
+      ...githubResults,
+      ...steamResults,
     ];
 
     // Deduplicate by URL
@@ -57,6 +67,9 @@ export async function GET() {
           rss: rssResults.flat().length,
           reddit: redditResults.flat().length,
           hackernews: hnResults.length,
+          bluesky: blueskyResults.length,
+          github: githubResults.length,
+          steam: steamResults.length,
         },
         fetchedAt: new Date().toISOString(),
         breakingCount: uniqueItems.filter((i) => i.isBreaking).length,
