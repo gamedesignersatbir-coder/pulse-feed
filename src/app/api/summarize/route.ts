@@ -7,11 +7,11 @@ const summaryCache = new Map<string, string>();
 const MAX_CACHE = 500;
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
+      { error: "OPENROUTER_API_KEY not configured" },
       { status: 501 }
     );
   }
@@ -51,15 +51,17 @@ export async function POST(req: NextRequest) {
       )
       .join("\n\n");
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    // Use OpenRouter API (OpenAI-compatible format)
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://pulsefeed.app",
+        "X-Title": "PulseFeed",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-20250414",
+        model: "anthropic/claude-haiku-4",
         max_tokens: 1024,
         messages: [
           {
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error("Anthropic API error:", res.status, errorText);
+      console.error("OpenRouter API error:", res.status, errorText);
       return NextResponse.json(
         { error: "AI summarization failed", summaries: results },
         { status: 502 }
@@ -80,7 +82,8 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-    const responseText = data.content?.[0]?.text || "";
+    // OpenRouter returns OpenAI-compatible format: data.choices[0].message.content
+    const responseText = data.choices?.[0]?.message?.content || "";
 
     // Parse numbered responses
     const lines = responseText.split("\n").filter((l: string) => l.trim());
