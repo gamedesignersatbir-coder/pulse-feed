@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { FeedItem } from "@/types";
-import { categoryColor, timeAgo, formatNumber, dramaBarColor } from "@/lib/utils";
+import { categoryColor, categoryLabel, timeAgo, formatNumber, dramaBarColor } from "@/lib/utils";
 import { dramaLevelEmoji } from "@/lib/scorer";
 import {
   MessageSquare,
@@ -135,7 +135,7 @@ export default function FeedCard({
                 item.category
               )}`}
             >
-              {item.category === "ai" ? "AI" : item.category === "gaming" ? "Gaming" : "General"}
+              {categoryLabel(item.category)}
             </span>
             <span className="text-[11px] text-stone-500">
               {item.source}
