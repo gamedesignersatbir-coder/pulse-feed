@@ -1,13 +1,22 @@
 "use client";
 
-import { FeedCategory, FeedSource, FilterState } from "@/types";
+import { FeedCategory, FeedSource, FilterState, SortOrder } from "@/types";
 import { categoryLabel } from "@/lib/utils";
 import {
   Search,
   Flame,
   Zap,
   Bookmark,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
+
+const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+  { value: "importance", label: "Top" },
+  { value: "recent", label: "New" },
+  { value: "engagement", label: "Hot" },
+  { value: "drama", label: "Drama" },
+];
 
 interface FilterBarProps {
   filters: FilterState;
@@ -38,6 +47,26 @@ export default function FilterBar({
   bookmarkCount,
   searchRef,
 }: FilterBarProps) {
+  const isFiltered =
+    filters.categories.length > 0 ||
+    filters.sources.length > 0 ||
+    filters.breakingOnly ||
+    filters.bookmarksOnly ||
+    filters.minDramaScore > 0 ||
+    filters.searchQuery.length > 0 ||
+    filters.sortOrder !== "importance";
+
+  const clearAll = () =>
+    onFilterChange({
+      categories: [],
+      sources: [],
+      minDramaScore: 0,
+      breakingOnly: false,
+      bookmarksOnly: false,
+      searchQuery: "",
+      sortOrder: "importance",
+    });
+
   const toggleCategory = (cat: FeedCategory) => {
     const cats = filters.categories.includes(cat)
       ? filters.categories.filter((c) => c !== cat)
@@ -53,11 +82,11 @@ export default function FilterBar({
   };
 
   return (
-    <div className="border-b border-zinc-800 bg-surface-raised/80 backdrop-blur-sm sticky top-0 z-20">
+    <div className="border-b border-stone-700/60 bg-surface-raised/80 backdrop-blur-sm sticky top-0 z-20">
       <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 overflow-x-auto">
         {/* Search */}
         <div className="relative flex-shrink-0 w-40 md:w-64">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-500" />
           <input
             ref={searchRef as React.RefObject<HTMLInputElement>}
             type="text"
@@ -66,8 +95,22 @@ export default function FilterBar({
             onChange={(e) =>
               onFilterChange({ ...filters, searchQuery: e.target.value })
             }
-            className="w-full bg-surface pl-8 pr-3 py-1.5 rounded-lg text-xs text-zinc-200 placeholder-zinc-600 border border-zinc-800 focus:border-zinc-600 focus:outline-none transition-colors"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                onFilterChange({ ...filters, searchQuery: "" });
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="w-full bg-surface pl-8 pr-7 py-1.5 rounded-lg text-xs text-stone-200 placeholder-stone-600 border border-stone-700 focus:border-stone-500 focus:outline-none transition-colors"
           />
+          {filters.searchQuery && (
+            <button
+              onClick={() => onFilterChange({ ...filters, searchQuery: "" })}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
 
         {/* Category toggles */}
@@ -85,8 +128,8 @@ export default function FilterBar({
                       ? "bg-green-500/20 text-green-400 border border-green-500/30"
                       : cat === "social"
                         ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                        : "bg-zinc-500/20 text-zinc-400 border border-zinc-500/30"
-                  : "text-zinc-600 border border-transparent hover:text-zinc-400"
+                        : "bg-stone-500/20 text-stone-400 border border-stone-500/30"
+                  : "text-stone-600 border border-transparent hover:text-stone-400"
               }`}
             >
               {categoryLabel(cat)}
@@ -94,7 +137,7 @@ export default function FilterBar({
           ))}
         </div>
 
-        <div className="w-px h-5 bg-zinc-800 flex-shrink-0 hidden md:block" />
+        <div className="w-px h-5 bg-stone-700/60 flex-shrink-0 hidden md:block" />
 
         {/* Source toggles */}
         <div className="flex items-center gap-1">
@@ -104,8 +147,8 @@ export default function FilterBar({
               onClick={() => toggleSource(value)}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap ${
                 filters.sources.length === 0 || filters.sources.includes(value)
-                  ? "bg-zinc-700/50 text-zinc-300 border border-zinc-600/50"
-                  : "text-zinc-600 border border-transparent hover:text-zinc-400"
+                  ? "bg-stone-700/50 text-stone-300 border border-stone-600/50"
+                  : "text-stone-600 border border-transparent hover:text-stone-400"
               }`}
             >
               {label}
@@ -113,7 +156,7 @@ export default function FilterBar({
           ))}
         </div>
 
-        <div className="w-px h-5 bg-zinc-800 flex-shrink-0 hidden md:block" />
+        <div className="w-px h-5 bg-stone-700/60 flex-shrink-0 hidden md:block" />
 
         {/* Special filters */}
         <button
@@ -127,7 +170,7 @@ export default function FilterBar({
           className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap ${
             filters.breakingOnly
               ? "bg-red-500/20 text-red-400 border border-red-500/30"
-              : "text-zinc-600 border border-transparent hover:text-zinc-400"
+              : "text-stone-600 border border-transparent hover:text-stone-400"
           }`}
         >
           <Zap className="w-3 h-3" />
@@ -150,7 +193,7 @@ export default function FilterBar({
           className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap ${
             filters.minDramaScore > 0
               ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-              : "text-zinc-600 border border-transparent hover:text-zinc-400"
+              : "text-stone-600 border border-transparent hover:text-stone-400"
           }`}
         >
           <Flame className="w-3 h-3" />
@@ -175,7 +218,7 @@ export default function FilterBar({
           className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap ${
             filters.bookmarksOnly
               ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-              : "text-zinc-600 border border-transparent hover:text-zinc-400"
+              : "text-stone-600 border border-transparent hover:text-stone-400"
           }`}
         >
           <Bookmark className="w-3 h-3" />
@@ -187,8 +230,40 @@ export default function FilterBar({
           )}
         </button>
 
+        <div className="w-px h-5 bg-stone-700/60 flex-shrink-0 hidden md:block" />
+
+        {/* Sort order */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <ArrowUpDown className="w-3 h-3 text-stone-600 hidden sm:block" />
+          {SORT_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => onFilterChange({ ...filters, sortOrder: value })}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap ${
+                filters.sortOrder === value
+                  ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                  : "text-stone-600 border border-transparent hover:text-stone-400"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Clear filters */}
+        {isFiltered && (
+          <button
+            onClick={clearAll}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-stone-500 hover:text-stone-200 hover:bg-surface-overlay transition-all whitespace-nowrap flex-shrink-0"
+            title="Clear all filters"
+          >
+            <X className="w-3 h-3" />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+        )}
+
         {/* Item count */}
-        <div className="ml-auto text-[11px] text-zinc-600 whitespace-nowrap">
+        <div className="ml-auto text-[11px] text-stone-600 whitespace-nowrap">
           {totalItems} items
         </div>
       </div>

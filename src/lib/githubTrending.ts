@@ -1,5 +1,5 @@
 import { FeedItem } from "@/types";
-import { calculateDramaScore, getDramaLevel, isBreakingNews, extractTags } from "./scorer";
+import { extractTags } from "./scorer";
 
 function generateId(name: string): string {
   let hash = 0;
@@ -76,8 +76,6 @@ function repoToFeedItem(repo: GithubRepo, category: "ai" | "gaming"): FeedItem {
     },
   };
 
-  const dramaScore = calculateDramaScore(partial);
-
   return {
     id: generateId(repo.full_name),
     title,
@@ -90,10 +88,10 @@ function repoToFeedItem(repo: GithubRepo, category: "ai" | "gaming"): FeedItem {
     imageUrl: repo.owner.avatar_url,
     author: repo.owner.login,
     engagement: partial.engagement!,
-    dramaScore,
-    dramaLevel: getDramaLevel(dramaScore),
-    isBreaking: isBreakingNews(partial),
-    tags: extractTags(partial),
+    dramaScore: 0,
+    dramaLevel: "none",
+    isBreaking: false,
+    tags: [...extractTags(partial), ...(repo.language ? [repo.language] : [])],
   };
 }
 

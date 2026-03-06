@@ -46,30 +46,30 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-surface-raised border border-zinc-700 rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden shadow-2xl animate-slide-in"
+        className="bg-surface-raised border border-stone-700 rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden shadow-2xl animate-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-700/60">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-cyan-500" />
-            <h2 className="text-sm font-semibold text-zinc-100">Topic History</h2>
+            <h2 className="text-sm font-semibold text-stone-100">Topic History</h2>
             {stats && (
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-stone-500">
                 {stats.totalItems.toLocaleString()} items stored
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-surface-overlay text-zinc-500 hover:text-zinc-300">
+          <button onClick={onClose} className="p-1 rounded hover:bg-surface-overlay text-stone-500 hover:text-stone-300">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Search bar */}
-        <div className="px-5 py-3 border-b border-zinc-800">
+        <div className="px-5 py-3 border-b border-stone-700/60">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-500" />
               <input
                 type="text"
                 value={query}
@@ -78,7 +78,7 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
                   if (e.key === "Enter") handleSearch();
                 }}
                 placeholder="Search past 7 days... (e.g. OpenAI, layoffs, Steam)"
-                className="w-full bg-surface pl-8 pr-3 py-2 rounded-lg text-xs text-zinc-200 placeholder-zinc-600 border border-zinc-800 focus:border-zinc-600 focus:outline-none"
+                className="w-full bg-surface pl-8 pr-3 py-2 rounded-lg text-xs text-stone-200 placeholder-stone-600 border border-stone-700 focus:border-stone-500 focus:outline-none"
                 autoFocus
               />
             </div>
@@ -96,11 +96,11 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
         <div className="overflow-y-auto max-h-[calc(80vh-140px)] p-4">
           {!hasSearched && (
             <div className="text-center py-12">
-              <History className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
-              <p className="text-xs text-zinc-500">
+              <History className="w-8 h-8 text-stone-700 mx-auto mb-3" />
+              <p className="text-xs text-stone-500">
                 Search across the last 7 days of tracked news
               </p>
-              <p className="text-[10px] text-zinc-600 mt-1">
+              <p className="text-[10px] text-stone-600 mt-1">
                 Items are stored locally in your browser
               </p>
             </div>
@@ -108,8 +108,8 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
 
           {hasSearched && results.length === 0 && !isSearching && (
             <div className="text-center py-12">
-              <p className="text-xs text-zinc-500">No results found for &quot;{query}&quot;</p>
-              <p className="text-[10px] text-zinc-600 mt-1">
+              <p className="text-xs text-stone-500">No results found for &quot;{query}&quot;</p>
+              <p className="text-[10px] text-stone-600 mt-1">
                 History builds up as you use PulseFeed
               </p>
             </div>
@@ -117,7 +117,7 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
 
           {results.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] text-zinc-600 mb-2">
+              <p className="text-[10px] text-stone-600 mb-2">
                 {results.length} results
               </p>
               {results.map((item) => (
@@ -126,7 +126,7 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block p-3 rounded-lg border border-zinc-800 hover:bg-surface-overlay transition-colors group"
+                  className="block p-3 rounded-lg border border-stone-700 hover:bg-surface-overlay transition-colors group"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span
@@ -134,15 +134,20 @@ export default function HistorySearch({ isOpen, onClose }: HistorySearchProps) {
                     >
                       {item.category}
                     </span>
-                    <span className="text-[10px] text-zinc-500">{item.source}</span>
-                    <span className="text-[10px] text-zinc-600">{timeAgo(item.publishedAt)}</span>
-                    <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 ml-auto" />
+                    <span className="text-[10px] text-stone-500">{item.source}</span>
+                    <span className="text-[10px] text-stone-600">{timeAgo(item.publishedAt)}</span>
+                    <ExternalLink className="w-3 h-3 text-stone-600 opacity-0 group-hover:opacity-100 ml-auto" />
                   </div>
-                  <p className="text-xs font-medium text-zinc-300 group-hover:text-white line-clamp-2">
+                  <p className="text-xs font-medium text-stone-300 group-hover:text-white line-clamp-2">
                     {item.title}
                   </p>
-                  {item.summary && (
-                    <p className="text-[10px] text-zinc-500 line-clamp-1 mt-1">{item.summary}</p>
+                  {(item.aiSummary || item.summary) && (
+                    <p className="text-[10px] text-stone-500 line-clamp-1 mt-1">
+                      {item.aiSummary ? (
+                        <span className="text-indigo-400/70 mr-1 font-medium">AI:</span>
+                      ) : null}
+                      {item.aiSummary || item.summary}
+                    </p>
                   )}
                 </a>
               ))}

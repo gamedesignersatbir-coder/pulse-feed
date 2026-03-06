@@ -11,8 +11,8 @@
 html,
 body {
   height: 100%;
-  background-color: #0f0f13;
-  color: #e4e4e7;
+  background-color: #2d2820;
+  color: #f0e8d8;
 }
 
 /* Custom scrollbar */
@@ -26,18 +26,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #3a3730;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #4a4740;
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #27272a transparent;
+  scrollbar-color: #3a3730 transparent;
 }
 
 /* Line clamp utility */
@@ -55,14 +55,10 @@ body {
   overflow: hidden;
 }
 
-/* Ticker animation override for smoother performance */
+/* Ticker animation — 0 → -50% with doubled content for seamless loop */
 @keyframes ticker {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
 }
 
 /* Focus styles */

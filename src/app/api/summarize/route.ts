@@ -24,14 +24,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Limit batch size
-    const batch = items.slice(0, 10);
+    const batch = items.slice(0, 10) as Array<{ id: string; title: string; summary: string; url?: string }>;
 
-    // Check cache first
-    const uncached: Array<{ id: string; title: string; summary: string }> = [];
+    // Normalize URL for cache key: strip trailing slash + query params that vary by session
+    function cacheKey(item: { id: string; url?: string }): string {
+      if (!item.url) return item.id;
+      try {
+        const u = new URL(item.url);
+        return `${u.hostname}${u.pathname}`.replace(/\/$/, "");
+      } catch {
+        return item.id;
+      }
+    }
+
+    // Check cache first (keyed by normalized URL to deduplicate cross-source stories)
+    const uncached: Array<{ id: string; title: string; summary: string; url?: string }> = [];
     const results: Record<string, string> = {};
 
     for (const item of batch) {
-      const cached = summaryCache.get(item.id);
+      const key = cacheKey(item);
+      const cached = summaryCache.get(key);
       if (cached) {
         results[item.id] = cached;
       } else {
@@ -92,7 +104,7 @@ export async function POST(req: NextRequest) {
       const summary = lines[i].replace(/^\[?\d+\]?\.?\s*/, "").trim();
       if (summary) {
         results[uncached[i].id] = summary;
-        summaryCache.set(uncached[i].id, summary);
+        summaryCache.set(cacheKey(uncached[i]), summary);
       }
     }
 

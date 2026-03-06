@@ -6,9 +6,9 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#0f0f13",
-          raised: "#16161d",
-          overlay: "#1e1e28",
+          DEFAULT: "#2d2820",
+          raised: "#38302a",
+          overlay: "#463e36",
         },
         accent: {
           ai: "#6366f1",
@@ -25,8 +25,8 @@ const config: Config = {
       },
       keyframes: {
         ticker: {
-          "0%": { transform: "translateX(100%)" },
-          "100%": { transform: "translateX(-100%)" },
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
         },
         "pulse-glow": {
           "0%, 100%": { opacity: "1" },

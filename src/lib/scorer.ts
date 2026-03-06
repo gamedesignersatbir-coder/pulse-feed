@@ -26,13 +26,21 @@ const DRAMA_KEYWORDS = [
   "pay to win", "p2w", "downgrade", "delayed", "refund", "refunds",
   "broken", "buggy", "unplayable", "drm", "anti-cheat", "loot box",
   "gacha", "monetization",
+  // Corporate / tech drama
+  "acqui", "acquisition", "hostile takeover", "merger", "antitrust",
+  "investigation", "data breach", "hacked", "ransomware", "fine",
+  "class action", "settle", "settlement", "resign", "resigned",
+  "quit", "walk out", "strike", "protest",
+  // AI-specific (current events)
+  "safety team", "red team", "jailbreak", "prompt injection",
+  "model collapse", "copyright", "plagiarism", "stolen",
+  "open letter", "petition",
 ];
 
 const BREAKING_KEYWORDS = [
-  "breaking", "just in", "happening now", "just announced",
-  "official", "confirmed", "exclusive", "first look",
-  "launches", "launched", "releases", "released", "unveils",
-  "reveals", "announced", "announcing",
+  "breaking", "just in", "happening now", "breaking news",
+  "developing story", "we interrupt", "emergency broadcast",
+  "urgent", "just reported", "just broke",
 ];
 
 export function calculateDramaScore(item: Partial<FeedItem>): number {
@@ -111,21 +119,37 @@ export function extractTags(item: Partial<FeedItem>): string[] {
   const tags: string[] = [];
 
   const tagPatterns: Record<string, string[]> = {
-    "OpenAI": ["openai", "chatgpt", "gpt-4", "gpt-5", "sam altman", "dall-e", "sora"],
-    "Google": ["google", "gemini", "deepmind", "bard", "google ai"],
+    // AI companies & models
+    "OpenAI": ["openai", "chatgpt", "gpt-4", "gpt-5", "gpt-4o", "o1", "o3", "sam altman", "dall-e", "sora", "whisper"],
+    "Google": ["google", "gemini", "deepmind", "bard", "google ai", "google deepmind", "notebooklm"],
     "Anthropic": ["anthropic", "claude"],
-    "Meta AI": ["meta ai", "llama", "llama 2", "llama 3"],
-    "Microsoft": ["microsoft", "copilot", "bing ai", "azure ai"],
-    "Apple": ["apple intelligence", "apple ai", "apple ml"],
-    "NVIDIA": ["nvidia", "cuda", "gpu", "rtx"],
-    "Steam": ["steam", "valve", "steam deck"],
-    "PlayStation": ["playstation", "ps5", "ps6", "sony"],
-    "Xbox": ["xbox", "game pass", "microsoft gaming"],
+    "Meta AI": ["meta ai", "llama", "llama 2", "llama 3", "meta llama"],
+    "Microsoft": ["microsoft", "copilot", "bing ai", "azure ai", "azure openai"],
+    "Apple": ["apple intelligence", "apple ai", "apple ml", "siri ai"],
+    "xAI": ["xai", "grok", "elon musk ai"],
+    "Mistral": ["mistral", "mixtral"],
+    "NVIDIA": ["nvidia", "cuda", "gpu", "rtx", "h100", "blackwell"],
+    "Robotics": ["robotics", "robot", "humanoid", "boston dynamics", "figure ai", "1x technologies"],
+    // Gaming platforms
+    "Steam": ["steam", "valve", "steam deck", "steamdb"],
+    "PlayStation": ["playstation", "ps5", "ps6", "sony interactive"],
+    "Xbox": ["xbox", "game pass", "microsoft gaming", "phil spencer"],
     "Nintendo": ["nintendo", "switch", "switch 2"],
-    "Epic Games": ["epic games", "fortnite", "unreal"],
-    "AI Safety": ["ai safety", "alignment", "regulation"],
-    "Open Source": ["open source", "open-source", "hugging face", "huggingface"],
-    "Startup": ["startup", "funding", "raised", "series a", "series b", "yc"],
+    "Epic Games": ["epic games", "fortnite", "unreal engine"],
+    "PC Gaming": ["pc gaming", "pcgaming", "graphics card", "amd gpu", "intel arc"],
+    // Game titles with active communities
+    "Minecraft": ["minecraft", "mojang"],
+    "GTA": ["gta", "grand theft auto", "rockstar"],
+    "Elden Ring": ["elden ring", "fromsoft", "fromsoftware"],
+    "Baldur's Gate": ["baldur's gate", "larian"],
+    "Palworld": ["palworld", "pocketpair"],
+    // AI topics
+    "AI Safety": ["ai safety", "alignment", "existential risk", "agi safety", "regulation", "ai act"],
+    "Open Source AI": ["open source", "open-source", "hugging face", "huggingface", "ollama", "localai"],
+    "AI Agents": ["ai agent", "agentic", "autonomous ai", "multi-agent", "agent framework"],
+    "Layoffs": ["layoffs", "laid off", "job cuts", "workforce reduction"],
+    "Startup": ["startup", "funding", "raised", "series a", "series b", "seed round", "yc", "y combinator"],
+    "Regulation": ["regulation", "eu ai act", "senate", "congress", "ftc", "antitrust"],
   };
 
   for (const [tag, keywords] of Object.entries(tagPatterns)) {
@@ -142,7 +166,7 @@ export function dramaLevelColor(level: DramaLevel): string {
     case "nuclear": return "text-red-500";
     case "spicy": return "text-orange-500";
     case "mild": return "text-yellow-500";
-    case "none": return "text-zinc-500";
+    case "none": return "text-stone-500";
   }
 }
 

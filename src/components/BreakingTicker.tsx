@@ -7,12 +7,13 @@ interface BreakingTickerProps {
   items: FeedItem[];
 }
 
+const SEPARATOR = "   ///   ";
+
 export default function BreakingTicker({ items }: BreakingTickerProps) {
   if (items.length === 0) return null;
 
-  const tickerText = items
-    .map((item) => `${item.source}: ${item.title}`)
-    .join("  ///  ");
+  // Build segments so each title is individually clickable
+  const segments = [...items, ...items]; // double for seamless loop
 
   return (
     <div className="relative bg-red-950/40 border-b border-red-500/20 overflow-hidden">
@@ -25,12 +26,26 @@ export default function BreakingTicker({ items }: BreakingTickerProps) {
           </span>
         </div>
 
-        {/* Scrolling text */}
-        <div className="overflow-hidden flex-1">
-          <div className="animate-ticker-scroll whitespace-nowrap py-2 px-4">
-            <span className="text-sm text-red-200">
-              {tickerText}  ///  {tickerText}
-            </span>
+        {/* Scrolling text — pauses on hover so items are readable */}
+        <div className="overflow-hidden flex-1 group/ticker">
+          <div
+            className="animate-ticker-scroll group-hover/ticker:[animation-play-state:paused] whitespace-nowrap py-2 px-4 flex items-center"
+            style={{ animationDuration: `${Math.max(20, items.length * 8)}s` }}
+          >
+            {segments.map((item, i) => (
+              <span key={`${item.id}-${i}`} className="inline-flex items-center">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-red-200 hover:text-white hover:underline transition-colors cursor-pointer"
+                >
+                  <span className="text-red-400 font-medium">{item.source}:</span>{" "}
+                  {item.title}
+                </a>
+                <span className="text-red-700 mx-2">{SEPARATOR}</span>
+              </span>
+            ))}
           </div>
         </div>
       </div>

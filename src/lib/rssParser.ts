@@ -117,14 +117,16 @@ export async function fetchRedditFeed(source: FeedSourceConfig): Promise<FeedIte
 
     for (const post of posts.slice(0, 20)) {
       const d = post.data;
-      if (!d || d.stickied) continue;
+      if (!d || d.stickied || d.distinguished === "moderator") continue;
+      if ((d.score || 0) < 5) continue; // filter low-quality / spam posts
+
+      const isExternalLink = d.url && !d.url.startsWith("https://www.reddit.com") && !d.is_self;
+      const redditPermalink = `https://www.reddit.com${d.permalink}`;
 
       const partial: Partial<FeedItem> = {
         title: d.title || "Untitled",
         summary: stripHtml(d.selftext || "").slice(0, 300),
-        url: d.url?.startsWith("https://www.reddit.com")
-          ? d.url
-          : `https://www.reddit.com${d.permalink}`,
+        url: isExternalLink ? d.url : redditPermalink,
         source: source.name,
         sourceType: "reddit",
         category: source.category,
@@ -147,6 +149,8 @@ export async function fetchRedditFeed(source: FeedSourceConfig): Promise<FeedIte
       }
 
       const dramaScore = calculateDramaScore(partial);
+      // Add subreddit as a tag so it's searchable and shows in trending
+      const subredditTag = d.subreddit ? `r/${d.subreddit}` : source.name;
 
       items.push({
         id: generateId(source.id, d.id || d.permalink || ""),
@@ -163,7 +167,8 @@ export async function fetchRedditFeed(source: FeedSourceConfig): Promise<FeedIte
         dramaScore,
         dramaLevel: getDramaLevel(dramaScore),
         isBreaking: isBreakingNews(partial),
-        tags: extractTags(partial),
+        tags: [...extractTags(partial), subredditTag],
+        redditUrl: isExternalLink ? redditPermalink : undefined,
       });
     }
 
@@ -176,64 +181,70 @@ export async function fetchRedditFeed(source: FeedSourceConfig): Promise<FeedIte
 
 export async function fetchHackerNews(): Promise<FeedItem[]> {
   try {
-    const topRes = await fetch(
-      "https://hacker-news.firebaseio.com/v0/topstories.json?limitToFirst=30&orderBy=%22$key%22",
+    // Algolia HN Search API: single request returns front page stories with text
+    const res = await fetch(
+      "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30",
       { next: { revalidate: 120 } }
     );
-    const topIds: number[] = await topRes.json();
-    const storyIds = topIds.slice(0, 25);
-
-    const stories = await Promise.all(
-      storyIds.map(async (id) => {
-        const res = await fetch(
-          `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
-          { next: { revalidate: 120 } }
-        );
-        return res.json();
-      })
-    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const hits: Array<{
+      objectID: string;
+      title: string;
+      url?: string;
+      story_text?: string;
+      author: string;
+      points: number;
+      num_comments: number;
+      created_at: string;
+    }> = data.hits ?? [];
 
     const items: FeedItem[] = [];
 
-    for (const story of stories) {
-      if (!story || story.type !== "story") continue;
+    for (const hit of hits) {
+      if (!hit.title) continue;
 
-      // Determine category based on content
-      const text = `${story.title || ""}`.toLowerCase();
+      const isAskHN = hit.title.startsWith("Ask HN:");
+      const isShowHN = hit.title.startsWith("Show HN:");
+      const hnSource = isAskHN ? "Ask HN" : isShowHN ? "Show HN" : "Hacker News";
+      // Ask/Show HN always link to the discussion page
+      const storyUrl = (isAskHN || isShowHN || !hit.url)
+        ? `https://news.ycombinator.com/item?id=${hit.objectID}`
+        : hit.url;
+      const summary = hit.story_text ? stripHtml(hit.story_text).slice(0, 300) : "";
+
+      // Determine category
+      const text = `${hit.title} ${summary}`.toLowerCase();
       let category: FeedItem["category"] = "general";
       const aiKeywords = ["ai", "gpt", "llm", "machine learning", "neural", "openai", "anthropic", "model", "transformer", "deep learning"];
       const gamingKeywords = ["game", "gaming", "steam", "playstation", "xbox", "nintendo", "epic"];
-
       if (aiKeywords.some((kw) => text.includes(kw))) category = "ai";
       else if (gamingKeywords.some((kw) => text.includes(kw))) category = "gaming";
 
       const partial: Partial<FeedItem> = {
-        title: story.title || "Untitled",
-        summary: "",
-        url: story.url || `https://news.ycombinator.com/item?id=${story.id}`,
-        source: "Hacker News",
+        title: hit.title,
+        summary,
+        url: storyUrl,
+        source: hnSource,
         sourceType: "hackernews",
         category,
-        publishedAt: new Date(story.time * 1000).toISOString(),
-        author: story.by,
-        engagement: {
-          score: story.score || 0,
-          comments: story.descendants || 0,
-        },
+        publishedAt: hit.created_at,
+        author: hit.author,
+        engagement: { score: hit.points, comments: hit.num_comments },
       };
 
       const dramaScore = calculateDramaScore(partial);
 
       items.push({
-        id: generateId("hn", String(story.id)),
-        title: partial.title!,
-        summary: "",
-        url: partial.url!,
-        source: "Hacker News",
+        id: generateId("hn", hit.objectID),
+        title: hit.title,
+        summary,
+        url: storyUrl,
+        source: hnSource,
         sourceType: "hackernews",
         category,
-        publishedAt: partial.publishedAt!,
-        author: partial.author,
+        publishedAt: hit.created_at,
+        author: hit.author,
         engagement: partial.engagement!,
         dramaScore,
         dramaLevel: getDramaLevel(dramaScore),

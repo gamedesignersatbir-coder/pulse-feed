@@ -1,27 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 export function useAutoRefresh(
   callback: () => void,
   intervalMs: number,
   enabled: boolean
-) {
+): { secondsUntilRefresh: number } {
   const savedCallback = useRef(callback);
+  const nextRefreshRef = useRef<number>(Date.now() + intervalMs);
+  const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(
+    Math.ceil(intervalMs / 1000)
+  );
 
   useEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setSecondsUntilRefresh(Math.ceil(intervalMs / 1000));
+      return;
+    }
 
-    const id = setInterval(() => {
+    nextRefreshRef.current = Date.now() + intervalMs;
+
+    const refreshId = setInterval(() => {
+      nextRefreshRef.current = Date.now() + intervalMs;
       savedCallback.current();
     }, intervalMs);
 
-    return () => clearInterval(id);
+    const tickId = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((nextRefreshRef.current - Date.now()) / 1000));
+      setSecondsUntilRefresh(remaining);
+    }, 1000);
+
+    return () => {
+      clearInterval(refreshId);
+      clearInterval(tickId);
+    };
   }, [intervalMs, enabled]);
+
+  return { secondsUntilRefresh };
 }
 
 export function useKeyboardShortcut(

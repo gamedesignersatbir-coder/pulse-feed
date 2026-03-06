@@ -10,6 +10,7 @@ interface TrendingPanelProps {
   items: FeedItem[];
   isOpen: boolean;
   onClose: () => void;
+  onTopicClick?: (topic: string) => void;
 }
 
 function getVelocityIcon(velocity: TrendVelocity) {
@@ -21,7 +22,7 @@ function getVelocityIcon(velocity: TrendVelocity) {
     case "new":
       return <Sparkles className="w-3 h-3 text-amber-400" />;
     default:
-      return <Minus className="w-3 h-3 text-zinc-600" />;
+      return <Minus className="w-3 h-3 text-stone-600" />;
   }
 }
 
@@ -52,8 +53,9 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
 
   // Load previous snapshot for velocity comparison
   let prevTopics: Record<string, number> = {};
+  let prevSnapshot: ReturnType<typeof loadTrendingSnapshot> = null;
   try {
-    const prevSnapshot = loadTrendingSnapshot();
+    prevSnapshot = loadTrendingSnapshot();
     prevTopics = prevSnapshot?.topics ?? {};
   } catch {
     // Storage not available (SSR) — skip velocity
@@ -103,16 +105,25 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
       };
     });
 
-  // Save current snapshot for next comparison
+  // Save snapshot only if the previous one is older than 30 minutes.
+  // This ensures velocity reflects genuine change over time rather than
+  // resetting to "stable" on every refresh within the same session.
   try {
-    const currentTopics: Record<string, number> = {};
-    Array.from(topicCounts.entries()).forEach(([topic, data]) => {
-      currentTopics[topic] = data.count;
-    });
-    saveTrendingSnapshot({
-      timestamp: new Date().toISOString(),
-      topics: currentTopics,
-    });
+    const THIRTY_MIN = 30 * 60 * 1000;
+    const shouldUpdate =
+      !prevSnapshot ||
+      Date.now() - new Date(prevSnapshot.timestamp).getTime() > THIRTY_MIN;
+
+    if (shouldUpdate) {
+      const currentTopics: Record<string, number> = {};
+      Array.from(topicCounts.entries()).forEach(([topic, data]) => {
+        currentTopics[topic] = data.count;
+      });
+      saveTrendingSnapshot({
+        timestamp: new Date().toISOString(),
+        topics: currentTopics,
+      });
+    }
   } catch {
     // Storage not available
   }
@@ -120,20 +131,21 @@ function extractTrending(items: FeedItem[]): TrendingTopic[] {
   return trending;
 }
 
-export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelProps) {
+export default function TrendingPanel({ items, isOpen, onClose, onTopicClick }: TrendingPanelProps) {
   const trending = extractTrending(items);
   const topDrama = [...items]
     .filter((i) => i.dramaScore >= 25)
     .sort((a, b) => b.dramaScore - a.dramaScore)
     .slice(0, 5);
 
+  const engagementScore = (item: FeedItem) =>
+    (item.engagement.upvotes ?? 0) +
+    (item.engagement.comments ?? 0) * 3 +
+    (item.engagement.likes ?? 0) +
+    (item.engagement.score ?? 0);
+
   const recentHot = [...items]
-    .sort(
-      (a, b) =>
-        (b.engagement.comments ?? 0) +
-        (b.engagement.upvotes ?? 0) -
-        ((a.engagement.comments ?? 0) + (a.engagement.upvotes ?? 0))
-    )
+    .sort((a, b) => engagementScore(b) - engagementScore(a))
     .slice(0, 5);
 
   return (
@@ -141,32 +153,74 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
       className={`
         fixed inset-y-0 right-0 z-40 w-80 transform transition-transform duration-200 ease-in-out
         md:relative md:translate-x-0 md:flex-shrink-0
-        border-l border-zinc-800 overflow-y-auto bg-surface-raised
+        border-l border-stone-700/60 overflow-y-auto bg-surface-raised
         ${isOpen ? "translate-x-0" : "translate-x-full"}
       `}
     >
       <div className="p-4 space-y-6">
         {/* Mobile close button */}
         <div className="flex items-center justify-between md:hidden">
-          <span className="text-xs font-semibold text-zinc-300">Trending & Drama</span>
+          <span className="text-xs font-semibold text-stone-300">Trending & Drama</span>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-surface-overlay text-zinc-500"
+            className="p-1 rounded hover:bg-surface-overlay text-stone-500"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Drama Alert — shown first */}
+        {topDrama.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Flame className="w-4 h-4 text-red-500" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                Drama Alert
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {topDrama.map((item) => (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-2 rounded-lg hover:bg-surface-overlay transition-colors group"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`text-xs ${dramaLevelColor(item.dramaLevel)}`}>
+                      {dramaLevelEmoji(item.dramaLevel)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium text-stone-300 line-clamp-2 group-hover:text-white">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-stone-500">
+                          {item.source}
+                        </span>
+                        <span className="text-[10px] text-stone-600">
+                          Score: {item.dramaScore}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Trending Topics */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-amber-500" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-400">
               Trending
             </h2>
           </div>
           {trending.length === 0 ? (
-            <p className="text-xs text-zinc-600 italic">
+            <p className="text-xs text-stone-600 italic">
               Loading trends...
             </p>
           ) : (
@@ -174,14 +228,16 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
               {trending.map((topic, i) => (
                 <div
                   key={topic.topic}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-overlay transition-colors"
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${onTopicClick ? "cursor-pointer hover:bg-surface-overlay" : "hover:bg-surface-overlay"}`}
+                  onClick={() => { onTopicClick?.(topic.topic); onClose(); }}
+                  title={onTopicClick ? `Filter by "${topic.topic}"` : undefined}
                 >
-                  <span className="text-[11px] text-zinc-600 w-4">
+                  <span className="text-[11px] text-stone-600 w-4">
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-zinc-200 truncate">
+                      <span className="text-xs font-medium text-stone-200 truncate">
                         {topic.topic}
                       </span>
                       {topic.dramaLevel !== "none" && (
@@ -191,7 +247,7 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-zinc-500">
+                      <span className="text-[10px] text-stone-500">
                         {topic.mentions} mentions
                       </span>
                       {/* Velocity indicator */}
@@ -226,53 +282,11 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
           )}
         </section>
 
-        {/* Drama Alert */}
-        {topDrama.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Flame className="w-4 h-4 text-red-500" />
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Drama Alert
-              </h2>
-            </div>
-            <div className="space-y-2">
-              {topDrama.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-2 rounded-lg hover:bg-surface-overlay transition-colors group"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className={`text-xs ${dramaLevelColor(item.dramaLevel)}`}>
-                      {dramaLevelEmoji(item.dramaLevel)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-zinc-300 line-clamp-2 group-hover:text-white">
-                        {item.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-zinc-500">
-                          {item.source}
-                        </span>
-                        <span className="text-[10px] text-zinc-600">
-                          Score: {item.dramaScore}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Most Active */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-cyan-500" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-400">
               Most Active
             </h2>
           </div>
@@ -285,10 +299,10 @@ export default function TrendingPanel({ items, isOpen, onClose }: TrendingPanelP
                 rel="noopener noreferrer"
                 className="block p-2 rounded-lg hover:bg-surface-overlay transition-colors group"
               >
-                <p className="text-[11px] font-medium text-zinc-300 line-clamp-2 group-hover:text-white">
+                <p className="text-[11px] font-medium text-stone-300 line-clamp-2 group-hover:text-white">
                   {item.title}
                 </p>
-                <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-500">
+                <div className="flex items-center gap-2 mt-1 text-[10px] text-stone-500">
                   <span>{item.source}</span>
                   {(item.engagement.comments ?? 0) > 0 && (
                     <span>

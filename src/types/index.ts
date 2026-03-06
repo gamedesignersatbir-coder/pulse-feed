@@ -24,6 +24,7 @@ export interface FeedItem {
   publishedAt: string;
   imageUrl?: string;
   author?: string;
+  redditUrl?: string; // for reddit external-link posts: the discussion thread URL
   engagement: EngagementMetrics;
   dramaScore: number; // 0-100
   dramaLevel: DramaLevel;
@@ -51,6 +52,8 @@ export interface FeedSourceConfig {
   enabled: boolean;
 }
 
+export type SortOrder = "importance" | "recent" | "engagement" | "drama";
+
 export interface FilterState {
   categories: FeedCategory[];
   sources: FeedSource[];
@@ -58,6 +61,7 @@ export interface FilterState {
   breakingOnly: boolean;
   bookmarksOnly: boolean;
   searchQuery: string;
+  sortOrder: SortOrder;
 }
 
 export interface TrendingTopic {

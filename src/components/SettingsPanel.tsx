@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { FeedSourceConfig } from "@/types";
-import { RSS_SOURCES, REDDIT_SOURCES } from "@/lib/feedSources";
+import { RSS_SOURCES, REDDIT_SOURCES, HACKERNEWS_SOURCE, BLUESKY_SOURCE, GITHUB_SOURCE, STEAM_SOURCE } from "@/lib/feedSources";
 import { loadCustomSources, saveCustomSources, loadDisabledSourceIds, toggleSourceEnabled } from "@/lib/sourceManager";
-import { X, Plus, Trash2, Rss, Globe } from "lucide-react";
+import { X, Plus, Trash2, Rss, Globe, Github, Gamepad2 } from "lucide-react";
+
+const SPECIAL_SOURCES: FeedSourceConfig[] = [
+  HACKERNEWS_SOURCE,
+  BLUESKY_SOURCE,
+  GITHUB_SOURCE,
+  STEAM_SOURCE,
+];
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -54,18 +61,19 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     { label: "AI News (RSS)", sources: RSS_SOURCES.filter((s) => s.category === "ai"), icon: <Rss className="w-3 h-3" /> },
     { label: "Gaming News (RSS)", sources: RSS_SOURCES.filter((s) => s.category === "gaming"), icon: <Rss className="w-3 h-3" /> },
     { label: "Reddit", sources: REDDIT_SOURCES, icon: <Globe className="w-3 h-3" /> },
+    { label: "Other Sources", sources: SPECIAL_SOURCES, icon: <Github className="w-3 h-3" /> },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-surface-raised border border-zinc-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl animate-slide-in"
+        className="bg-surface-raised border border-stone-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl animate-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-100">Source Management</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-surface-overlay text-zinc-500 hover:text-zinc-300">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-700/60">
+          <h2 className="text-sm font-semibold text-stone-100">Source Management</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-surface-overlay text-stone-500 hover:text-stone-300">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -74,7 +82,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           {/* Built-in sources */}
           {allSources.map(({ label, sources, icon }) => (
             <section key={label}>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
                 {icon}
                 {label}
               </h3>
@@ -90,7 +98,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         type="checkbox"
                         checked={enabled}
                         onChange={() => handleToggle(source.id)}
-                        className="w-3.5 h-3.5 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+                        className="w-3.5 h-3.5 rounded border-stone-600 bg-stone-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
                       />
                       <span
                         className="w-5 text-center text-[10px] font-bold"
@@ -98,7 +106,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       >
                         {source.icon}
                       </span>
-                      <span className={`text-xs flex-1 ${enabled ? "text-zinc-300" : "text-zinc-600 line-through"}`}>
+                      <span className={`text-xs flex-1 ${enabled ? "text-stone-300" : "text-stone-600 line-through"}`}>
                         {source.name}
                       </span>
                     </label>
@@ -110,7 +118,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
           {/* Custom sources */}
           <section>
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
               <Plus className="w-3 h-3" />
               Custom RSS Feeds
             </h3>
@@ -123,11 +131,11 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-overlay"
                   >
                     <span className="text-[10px] text-indigo-400">✦</span>
-                    <span className="text-xs text-zinc-300 flex-1 truncate">{source.name}</span>
-                    <span className="text-[10px] text-zinc-600 truncate max-w-[120px]">{source.url}</span>
+                    <span className="text-xs text-stone-300 flex-1 truncate">{source.name}</span>
+                    <span className="text-[10px] text-stone-600 truncate max-w-[120px]">{source.url}</span>
                     <button
                       onClick={() => handleRemoveCustom(source.id)}
-                      className="p-0.5 text-zinc-600 hover:text-red-400 transition-colors"
+                      className="p-0.5 text-stone-600 hover:text-red-400 transition-colors"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -137,26 +145,26 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             )}
 
             {/* Add form */}
-            <div className="space-y-2 p-3 rounded-lg border border-zinc-800 bg-surface">
+            <div className="space-y-2 p-3 rounded-lg border border-stone-700 bg-surface">
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Feed name (e.g. My Blog)"
-                className="w-full bg-surface-overlay px-3 py-1.5 rounded text-xs text-zinc-200 placeholder-zinc-600 border border-zinc-700 focus:border-zinc-500 focus:outline-none"
+                className="w-full bg-surface-overlay px-3 py-1.5 rounded text-xs text-stone-200 placeholder-stone-600 border border-stone-700 focus:border-stone-500 focus:outline-none"
               />
               <input
                 type="url"
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
                 placeholder="RSS feed URL (e.g. https://example.com/feed.xml)"
-                className="w-full bg-surface-overlay px-3 py-1.5 rounded text-xs text-zinc-200 placeholder-zinc-600 border border-zinc-700 focus:border-zinc-500 focus:outline-none"
+                className="w-full bg-surface-overlay px-3 py-1.5 rounded text-xs text-stone-200 placeholder-stone-600 border border-stone-700 focus:border-stone-500 focus:outline-none"
               />
               <div className="flex items-center gap-2">
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value as "ai" | "gaming" | "general")}
-                  className="bg-surface-overlay px-2 py-1.5 rounded text-xs text-zinc-300 border border-zinc-700 focus:outline-none"
+                  className="bg-surface-overlay px-2 py-1.5 rounded text-xs text-stone-300 border border-stone-700 focus:outline-none"
                 >
                   <option value="ai">AI</option>
                   <option value="gaming">Gaming</option>
@@ -174,7 +182,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           </section>
 
-          <p className="text-[10px] text-zinc-600 text-center">
+          <p className="text-[10px] text-stone-600 text-center">
             Changes take effect on next feed refresh.
           </p>
         </div>

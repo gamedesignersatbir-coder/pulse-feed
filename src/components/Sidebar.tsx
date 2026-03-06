@@ -20,8 +20,10 @@ import {
 
 interface SidebarProps {
   items: FeedItem[];
+  filteredItems: FeedItem[];
   isLoading: boolean;
   autoRefresh: boolean;
+  secondsUntilRefresh: number;
   lastUpdated: string | null;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
@@ -37,8 +39,10 @@ interface SidebarProps {
 
 export default function Sidebar({
   items,
+  filteredItems,
   isLoading,
   autoRefresh,
+  secondsUntilRefresh,
   lastUpdated,
   notificationsEnabled,
   soundEnabled,
@@ -51,11 +55,16 @@ export default function Sidebar({
   isOpen,
   onClose,
 }: SidebarProps) {
-  // Count items per source
+  // Count items per source (total and filtered)
   const sourceCounts = new Map<string, number>();
+  const filteredSourceCounts = new Map<string, number>();
   for (const item of items) {
     sourceCounts.set(item.source, (sourceCounts.get(item.source) || 0) + 1);
   }
+  for (const item of filteredItems) {
+    filteredSourceCounts.set(item.source, (filteredSourceCounts.get(item.source) || 0) + 1);
+  }
+  const isFiltering = filteredItems.length !== items.length;
 
   const aiRssCount = items.filter(
     (i) => i.sourceType === "rss" && i.category === "ai"
@@ -74,7 +83,7 @@ export default function Sidebar({
       className={`
         fixed inset-y-0 left-0 z-40 w-64 md:w-56 transform transition-transform duration-200 ease-in-out
         md:relative md:translate-x-0 md:flex-shrink-0
-        border-r border-zinc-800 overflow-y-auto bg-surface-raised
+        border-r border-stone-700/60 overflow-y-auto bg-surface-raised
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
@@ -88,11 +97,11 @@ export default function Sidebar({
             <h1 className="text-sm font-bold text-white tracking-tight">
               PulseFeed
             </h1>
-            <p className="text-[10px] text-zinc-500">AI & Gaming Radar</p>
+            <p className="text-[10px] text-stone-500">AI & Gaming Radar</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-surface-overlay text-zinc-500 md:hidden"
+            className="p-1 rounded hover:bg-surface-overlay text-stone-500 md:hidden"
           >
             <X className="w-4 h-4" />
           </button>
@@ -118,13 +127,13 @@ export default function Sidebar({
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                 autoRefresh
                   ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
+                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
               }`}
               title="Toggle auto-refresh (r)"
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  autoRefresh ? "bg-green-500 animate-pulse" : "bg-zinc-600"
+                  autoRefresh ? "bg-green-500 animate-pulse" : "bg-stone-600"
                 }`}
               />
               Auto
@@ -136,7 +145,7 @@ export default function Sidebar({
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                 notificationsEnabled
                   ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
+                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
               }`}
               title="Toggle breaking news notifications"
             >
@@ -154,7 +163,7 @@ export default function Sidebar({
               className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                 soundEnabled
                   ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
-                  : "bg-zinc-800/50 border border-zinc-700 text-zinc-500"
+                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
               }`}
               title="Toggle sound"
             >
@@ -167,8 +176,13 @@ export default function Sidebar({
           </div>
 
           {lastUpdated && (
-            <p className="text-[10px] text-zinc-600 text-center">
+            <p className="text-[10px] text-stone-600 text-center">
               Updated {new Date(lastUpdated).toLocaleTimeString()}
+              {autoRefresh && !isLoading && (
+                <span className="ml-1 text-stone-700">
+                  · {secondsUntilRefresh}s
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -177,7 +191,7 @@ export default function Sidebar({
         <div className="mb-6 flex gap-1.5">
           <button
             onClick={onOpenSettings}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800/50 border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-stone-800/50 border border-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-700/50 transition-all"
             title="Manage sources"
           >
             <Settings className="w-3 h-3" />
@@ -185,7 +199,7 @@ export default function Sidebar({
           </button>
           <button
             onClick={onOpenHistory}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800/50 border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-stone-800/50 border border-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-700/50 transition-all"
             title="Search topic history"
           >
             <History className="w-3 h-3" />
@@ -197,10 +211,10 @@ export default function Sidebar({
         <div className="space-y-4">
           {/* AI News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
               <Rss className="w-3 h-3" />
               AI News
-              <span className="ml-auto text-zinc-600">{aiRssCount}</span>
+              <span className="ml-auto text-stone-600">{aiRssCount}</span>
             </h3>
             <div className="space-y-0.5">
               {RSS_SOURCES.filter(
@@ -208,7 +222,7 @@ export default function Sidebar({
               ).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-zinc-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
                 >
                   <span
                     className="w-5 text-center text-[10px] font-bold"
@@ -217,8 +231,10 @@ export default function Sidebar({
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-zinc-600 text-[10px]">
-                    {sourceCounts.get(source.name) || 0}
+                  <span className="text-stone-600 text-[10px]">
+                    {isFiltering
+                      ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
+                      : sourceCounts.get(source.name) || 0}
                   </span>
                 </div>
               ))}
@@ -227,10 +243,10 @@ export default function Sidebar({
 
           {/* Gaming News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
               <Rss className="w-3 h-3" />
               Gaming
-              <span className="ml-auto text-zinc-600">{gamingRssCount}</span>
+              <span className="ml-auto text-stone-600">{gamingRssCount}</span>
             </h3>
             <div className="space-y-0.5">
               {RSS_SOURCES.filter(
@@ -238,7 +254,7 @@ export default function Sidebar({
               ).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-zinc-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
                 >
                   <span
                     className="w-5 text-center text-[10px] font-bold"
@@ -247,8 +263,10 @@ export default function Sidebar({
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-zinc-600 text-[10px]">
-                    {sourceCounts.get(source.name) || 0}
+                  <span className="text-stone-600 text-[10px]">
+                    {isFiltering
+                      ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
+                      : sourceCounts.get(source.name) || 0}
                   </span>
                 </div>
               ))}
@@ -257,23 +275,25 @@ export default function Sidebar({
 
           {/* Reddit */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               Reddit
-              <span className="ml-auto text-zinc-600">{redditCount}</span>
+              <span className="ml-auto text-stone-600">{redditCount}</span>
             </h3>
             <div className="space-y-0.5">
               {REDDIT_SOURCES.filter((s) => s.enabled).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-zinc-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
                 >
                   <span className="w-5 text-center text-[10px]">
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-zinc-600 text-[10px]">
-                    {sourceCounts.get(source.name) || 0}
+                  <span className="text-stone-600 text-[10px]">
+                    {isFiltering
+                      ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
+                      : sourceCounts.get(source.name) || 0}
                   </span>
                 </div>
               ))}
@@ -282,20 +302,20 @@ export default function Sidebar({
 
           {/* Hacker News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               Hacker News
-              <span className="ml-auto text-zinc-600">{hnCount}</span>
+              <span className="ml-auto text-stone-600">{hnCount}</span>
             </h3>
           </section>
 
           {/* Bluesky */}
           {blueskyCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
                 <Globe className="w-3 h-3" />
                 Bluesky
-                <span className="ml-auto text-zinc-600">{blueskyCount}</span>
+                <span className="ml-auto text-stone-600">{blueskyCount}</span>
               </h3>
             </section>
           )}
@@ -303,10 +323,10 @@ export default function Sidebar({
           {/* GitHub Trending */}
           {githubCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
                 <Github className="w-3 h-3" />
                 GitHub Trending
-                <span className="ml-auto text-zinc-600">{githubCount}</span>
+                <span className="ml-auto text-stone-600">{githubCount}</span>
               </h3>
             </section>
           )}
@@ -314,19 +334,19 @@ export default function Sidebar({
           {/* Steam News */}
           {steamCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
                 <Gamepad2 className="w-3 h-3" />
                 Steam News
-                <span className="ml-auto text-zinc-600">{steamCount}</span>
+                <span className="ml-auto text-stone-600">{steamCount}</span>
               </h3>
             </section>
           )}
         </div>
 
         {/* Keyboard hint */}
-        <div className="mt-6 pt-4 border-t border-zinc-800">
-          <p className="text-[10px] text-zinc-600 text-center">
-            Press <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono text-[9px]">?</kbd> for keyboard shortcuts
+        <div className="mt-6 pt-4 border-t border-stone-700/60">
+          <p className="text-[10px] text-stone-600 text-center">
+            Press <kbd className="px-1 py-0.5 rounded bg-stone-800 text-stone-400 font-mono text-[9px]">?</kbd> for keyboard shortcuts
           </p>
         </div>
       </div>

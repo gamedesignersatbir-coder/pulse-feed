@@ -3,21 +3,6 @@ import { calculateDramaScore, getDramaLevel, isBreakingNews, extractTags } from 
 
 const BSKY_PUBLIC_API = "https://public.api.bsky.app";
 
-// Curated Bluesky accounts for AI & gaming news
-const AI_ACCOUNTS = [
-  "arstechnica.com",
-  "theverge.com",
-  "wired.com",
-  "techcrunch.com",
-];
-
-const GAMING_ACCOUNTS = [
-  "ign.com",
-  "kotaku.com",
-  "eurogamer.net",
-  "pcgamer.com",
-];
-
 function generateId(uri: string): string {
   let hash = 0;
   const str = `bsky:${uri}`;
@@ -28,89 +13,70 @@ function generateId(uri: string): string {
   return `bsky-${Math.abs(hash).toString(36)}`;
 }
 
-interface BskyFeedViewPost {
-  post: {
-    uri: string;
-    cid: string;
-    author: {
-      handle: string;
-      displayName?: string;
-      avatar?: string;
-    };
-    record: {
-      text: string;
-      createdAt: string;
-      embed?: {
-        $type: string;
-        external?: {
-          uri: string;
-          title: string;
-          description: string;
-          thumb?: { ref: { $link: string } };
-        };
-      };
-    };
-    embed?: {
-      $type: string;
-      external?: {
-        uri: string;
-        title: string;
-        description: string;
-        thumb?: string;
-      };
-      images?: Array<{ thumb: string; alt: string }>;
-    };
-    likeCount?: number;
-    repostCount?: number;
-    replyCount?: number;
-    indexedAt?: string;
+interface BskyPost {
+  uri: string;
+  cid: string;
+  author: {
+    handle: string;
+    displayName?: string;
+    avatar?: string;
   };
+  record: {
+    text: string;
+    createdAt: string;
+  };
+  embed?: {
+    $type: string;
+    external?: {
+      uri: string;
+      title: string;
+      description: string;
+      thumb?: string;
+    };
+    images?: Array<{ thumb: string; alt: string }>;
+  };
+  likeCount?: number;
+  repostCount?: number;
+  replyCount?: number;
+  indexedAt?: string;
 }
 
-async function fetchAuthorFeed(actor: string, limit = 10): Promise<BskyFeedViewPost[]> {
+// Search top Bluesky posts for a query (hashtag or keyword)
+async function searchPosts(query: string, limit = 20): Promise<BskyPost[]> {
   try {
-    const params = new URLSearchParams({
-      actor,
-      limit: String(limit),
-      filter: "posts_no_replies",
-    });
-
+    const params = new URLSearchParams({ q: query, limit: String(limit), sort: "top" });
     const res = await fetch(
-      `${BSKY_PUBLIC_API}/xrpc/app.bsky.feed.getAuthorFeed?${params}`,
+      `${BSKY_PUBLIC_API}/xrpc/app.bsky.feed.searchPosts?${params}`,
       {
         headers: { Accept: "application/json" },
         next: { revalidate: 300 },
       }
     );
-
     if (!res.ok) return [];
     const data = await res.json();
-    return data.feed ?? [];
+    return data.posts ?? [];
   } catch {
     return [];
   }
 }
 
-function isRelevantToCategory(text: string, category: "ai" | "gaming"): boolean {
-  const lower = text.toLowerCase();
-  if (category === "ai") {
-    return /\b(ai|artificial intelligence|llm|gpt|claude|openai|anthropic|machine learning|deep learning|neural|transformer|chatbot|gemini|copilot)\b/i.test(lower);
-  }
-  return /\b(game|gaming|playstation|xbox|nintendo|steam|indie|esports|rpg|fps|mmorpg)\b/i.test(lower);
-}
-
-function feedPostToFeedItem(feedViewPost: BskyFeedViewPost, category: "ai" | "gaming"): FeedItem | null {
-  const post = feedViewPost.post;
-  const text = post.record.text || "";
+function postToFeedItem(post: BskyPost, category: FeedItem["category"]): FeedItem | null {
+  const text = post.record?.text || "";
   const external = post.embed?.external;
 
-  // Use external link title if available, otherwise first line of text
-  const title = external?.title || text.split("\n")[0].slice(0, 140) || "Bluesky Post";
+  const title = external?.title || text.split("\n")[0].slice(0, 140) || "";
   const summary = external?.description || text.slice(0, 300);
-  const url = external?.uri || `https://bsky.app/profile/${post.author.handle}/post/${post.uri.split("/").pop()}`;
-  const imageUrl = external?.thumb || post.embed?.images?.[0]?.thumb || post.author.avatar;
+  const url =
+    external?.uri ||
+    `https://bsky.app/profile/${post.author.handle}/post/${post.uri.split("/").pop()}`;
+  const imageUrl = external?.thumb || post.embed?.images?.[0]?.thumb;
 
-  if (!title || title.length < 5) return null;
+  // Skip very short or empty posts
+  if (!title || title.length < 10) return null;
+
+  // Skip low-engagement posts (noise from random accounts)
+  const totalEngagement = (post.likeCount || 0) + (post.repostCount || 0);
+  if (totalEngagement < 2) return null;
 
   const partial: Partial<FeedItem> = {
     title,
@@ -119,7 +85,7 @@ function feedPostToFeedItem(feedViewPost: BskyFeedViewPost, category: "ai" | "ga
     source: "Bluesky",
     sourceType: "bluesky",
     category,
-    publishedAt: post.record.createdAt || post.indexedAt || new Date().toISOString(),
+    publishedAt: post.record?.createdAt || post.indexedAt || new Date().toISOString(),
     author: post.author.displayName || post.author.handle,
     engagement: {
       likes: post.likeCount || 0,
@@ -152,33 +118,32 @@ function feedPostToFeedItem(feedViewPost: BskyFeedViewPost, category: "ai" | "ga
 
 export async function fetchBlueskyFeeds(): Promise<FeedItem[]> {
   try {
-    // Fetch from AI and gaming accounts in parallel
-    const aiPromises = AI_ACCOUNTS.map(async (actor) => {
-      const feedPosts = await fetchAuthorFeed(actor, 8);
-      return feedPosts
-        .map((fp) => feedPostToFeedItem(fp, "ai"))
-        .filter((item): item is FeedItem => item !== null)
-        .filter((item) => isRelevantToCategory(item.title + " " + item.summary, "ai"));
-    });
-
-    const gamingPromises = GAMING_ACCOUNTS.map(async (actor) => {
-      const feedPosts = await fetchAuthorFeed(actor, 8);
-      return feedPosts
-        .map((fp) => feedPostToFeedItem(fp, "gaming"))
-        .filter((item): item is FeedItem => item !== null)
-        .filter((item) => isRelevantToCategory(item.title + " " + item.summary, "gaming"));
-    });
-
-    const [aiResults, gamingResults] = await Promise.all([
-      Promise.all(aiPromises),
-      Promise.all(gamingPromises),
+    // Search for trending AI and gaming content — finds independent Bluesky voices,
+    // not just cross-posts from publishers already covered by RSS
+    const [aiPosts, gamingPosts] = await Promise.all([
+      Promise.all([
+        searchPosts("#AI", 20),
+        searchPosts("#LLM", 15),
+        searchPosts("#MachineLearning", 15),
+      ]).then((r) => r.flat()),
+      Promise.all([
+        searchPosts("#gaming", 20),
+        searchPosts("#gamedev", 15),
+        searchPosts("#indiegames", 10),
+      ]).then((r) => r.flat()),
     ]);
 
-    const allItems = [...aiResults.flat(), ...gamingResults.flat()];
+    const aiItems = aiPosts
+      .map((p) => postToFeedItem(p, "ai"))
+      .filter((item): item is FeedItem => item !== null);
+
+    const gamingItems = gamingPosts
+      .map((p) => postToFeedItem(p, "gaming"))
+      .filter((item): item is FeedItem => item !== null);
 
     // Deduplicate by URL
     const seen = new Set<string>();
-    return allItems.filter((item) => {
+    return [...aiItems, ...gamingItems].filter((item) => {
       if (seen.has(item.url)) return false;
       seen.add(item.url);
       return true;

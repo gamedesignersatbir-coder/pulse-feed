@@ -53,7 +53,9 @@ export function saveFilters(filters: FilterState): void {
 }
 
 export function loadFilters(fallback: FilterState): FilterState {
-  return load(KEYS.filters, fallback);
+  // Merge with fallback so new fields added in future updates are always present
+  const stored = load<Partial<FilterState>>(KEYS.filters, {});
+  return { ...fallback, ...stored };
 }
 
 // ── Read items (Set<string> stored as string[]) ──

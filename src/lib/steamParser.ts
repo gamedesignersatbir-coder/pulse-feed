@@ -1,5 +1,5 @@
 import { FeedItem } from "@/types";
-import { calculateDramaScore, getDramaLevel, isBreakingNews, extractTags } from "./scorer";
+import { extractTags } from "./scorer";
 
 function generateId(appId: number, gid: string): string {
   let hash = 0;
@@ -23,6 +23,9 @@ const TRACKED_GAMES: Record<number, string> = {
   1174180: "Red Dead Redemption 2",
   413150: "Stardew Valley",
   252490: "Rust",
+  1623730: "Palworld",
+  2379780: "Marvel Rivals",
+  1888930: "The Finals",
 };
 
 interface SteamNewsItem {
@@ -52,7 +55,7 @@ async function fetchGameNews(appId: number): Promise<SteamNewsItem[]> {
   try {
     const res = await fetch(
       `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=5&maxlength=500&format=json`,
-      { next: { revalidate: 300 } }
+      { next: { revalidate: 600 } }
     );
 
     if (!res.ok) return [];
@@ -78,8 +81,6 @@ function newsToFeedItem(news: SteamNewsItem, gameName: string): FeedItem {
     engagement: { score: 0 },
   };
 
-  const dramaScore = calculateDramaScore(partial);
-
   return {
     id: generateId(news.appid, news.gid),
     title: partial.title!,
@@ -91,9 +92,9 @@ function newsToFeedItem(news: SteamNewsItem, gameName: string): FeedItem {
     publishedAt: partial.publishedAt!,
     author: partial.author,
     engagement: partial.engagement!,
-    dramaScore,
-    dramaLevel: getDramaLevel(dramaScore),
-    isBreaking: isBreakingNews(partial),
+    dramaScore: 0,
+    dramaLevel: "none",
+    isBreaking: false,
     tags: [...extractTags(partial), gameName],
   };
 }
