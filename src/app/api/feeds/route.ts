@@ -28,8 +28,8 @@ function titleWords(title: string): Set<string> {
 
 function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 && b.size === 0) return 1;
-  const intersection = [...a].filter((w) => b.has(w)).length;
-  const union = new Set([...a, ...b]).size;
+  const intersection = Array.from(a).filter((w) => b.has(w)).length;
+  const union = new Set([...Array.from(a), ...Array.from(b)]).size;
   return intersection / union;
 }
 

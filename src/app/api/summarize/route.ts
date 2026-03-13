@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const batch = items.slice(0, 10) as Array<{ id: string; title: string; summary: string; url?: string }>;
 
     // Normalize URL for cache key: strip trailing slash + query params that vary by session
-    function cacheKey(item: { id: string; url?: string }): string {
+    const cacheKey = (item: { id: string; url?: string }): string => {
       if (!item.url) return item.id;
       try {
         const u = new URL(item.url);
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       } catch {
         return item.id;
       }
-    }
+    };
 
     // Check cache first (keyed by normalized URL to deduplicate cross-source stories)
     const uncached: Array<{ id: string; title: string; summary: string; url?: string }> = [];

@@ -2,13 +2,24 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#2d2820",
-          raised: "#38302a",
-          overlay: "#463e36",
+          DEFAULT: "var(--surface)",
+          raised: "var(--surface-raised)",
+          overlay: "var(--surface-overlay)",
+        },
+        content: {
+          DEFAULT: "var(--content)",
+          secondary: "var(--content-secondary)",
+          muted: "var(--content-muted)",
+          faint: "var(--content-faint)",
+        },
+        border: {
+          DEFAULT: "var(--border)",
+          muted: "var(--border-muted)",
         },
         accent: {
           ai: "#6366f1",

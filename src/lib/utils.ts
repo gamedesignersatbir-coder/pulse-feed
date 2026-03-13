@@ -19,7 +19,7 @@ export function categoryColor(category: FeedCategory): string {
     drama: "bg-red-500/20 text-red-400 border-red-500/30",
     breaking: "bg-red-500/20 text-red-400 border-red-500/30",
     social: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-    general: "bg-stone-500/20 text-stone-400 border-stone-500/30",
+    general: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
   };
   return colors[category] ?? colors.general;
 }
@@ -31,7 +31,7 @@ export function categoryDotColor(category: FeedCategory): string {
     drama: "bg-red-500",
     breaking: "bg-red-500",
     social: "bg-cyan-500",
-    general: "bg-stone-500",
+    general: "bg-zinc-500",
   };
   return colors[category] ?? colors.general;
 }
@@ -58,5 +58,5 @@ export function dramaBarColor(score: number): string {
   if (score >= 60) return "bg-red-500";
   if (score >= 35) return "bg-orange-500";
   if (score >= 15) return "bg-yellow-500";
-  return "bg-stone-600";
+  return "bg-zinc-600";
 }

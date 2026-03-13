@@ -2,6 +2,7 @@
 
 import { FeedItem } from "@/types";
 import { RSS_SOURCES, REDDIT_SOURCES } from "@/lib/feedSources";
+import ThemeToggle from "./ThemeToggle";
 import {
   Radio,
   Rss,
@@ -33,6 +34,8 @@ interface SidebarProps {
   onToggleSound: () => void;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
+  resolvedTheme: "light" | "dark";
+  onToggleTheme: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -52,6 +55,8 @@ export default function Sidebar({
   onToggleSound,
   onOpenSettings,
   onOpenHistory,
+  resolvedTheme,
+  onToggleTheme,
   isOpen,
   onClose,
 }: SidebarProps) {
@@ -81,9 +86,9 @@ export default function Sidebar({
   return (
     <div
       className={`
-        fixed inset-y-0 left-0 z-40 w-64 md:w-56 transform transition-transform duration-200 ease-in-out
-        md:relative md:translate-x-0 md:flex-shrink-0
-        border-r border-stone-700/60 overflow-y-auto bg-surface-raised
+        fixed inset-y-0 left-0 z-40 w-64 lg:w-56 transform transition-transform duration-200 ease-in-out
+        lg:relative lg:translate-x-0 lg:flex-shrink-0
+        border-r border-border overflow-y-auto bg-surface-raised
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
@@ -94,14 +99,14 @@ export default function Sidebar({
             <Radio className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1">
-            <h1 className="text-sm font-bold text-white tracking-tight">
+            <h1 className="text-sm font-bold text-content tracking-tight">
               PulseFeed
             </h1>
-            <p className="text-[10px] text-stone-500">AI & Gaming Radar</p>
+            <p className="text-[11px] text-content-muted">AI & Gaming Radar</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-surface-overlay text-stone-500 md:hidden"
+            className="p-1 rounded hover:bg-surface-overlay text-content-faint lg:hidden"
           >
             <X className="w-4 h-4" />
           </button>
@@ -124,16 +129,16 @@ export default function Sidebar({
             {/* Auto-refresh toggle */}
             <button
               onClick={onToggleAutoRefresh}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 autoRefresh
                   ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
+                  : "bg-surface-overlay border border-border text-content-faint"
               }`}
               title="Toggle auto-refresh (r)"
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  autoRefresh ? "bg-green-500 animate-pulse" : "bg-stone-600"
+                  autoRefresh ? "bg-green-500 animate-pulse" : "bg-content-faint"
                 }`}
               />
               Auto
@@ -142,10 +147,10 @@ export default function Sidebar({
             {/* Notifications toggle */}
             <button
               onClick={onToggleNotifications}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 notificationsEnabled
                   ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
+                  : "bg-surface-overlay border border-border text-content-faint"
               }`}
               title="Toggle breaking news notifications"
             >
@@ -160,10 +165,10 @@ export default function Sidebar({
             {/* Sound toggle */}
             <button
               onClick={onToggleSound}
-              className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 soundEnabled
                   ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
-                  : "bg-stone-800/50 border border-stone-700 text-stone-500"
+                  : "bg-surface-overlay border border-border text-content-faint"
               }`}
               title="Toggle sound"
             >
@@ -176,10 +181,10 @@ export default function Sidebar({
           </div>
 
           {lastUpdated && (
-            <p className="text-[10px] text-stone-600 text-center">
+            <p className="text-[11px] text-content-muted text-center">
               Updated {new Date(lastUpdated).toLocaleTimeString()}
               {autoRefresh && !isLoading && (
-                <span className="ml-1 text-stone-700">
+                <span className="ml-1 text-content-faint">
                   · {secondsUntilRefresh}s
                 </span>
               )}
@@ -187,11 +192,11 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Settings + History buttons */}
+        {/* Settings + History + Theme buttons */}
         <div className="mb-6 flex gap-1.5">
           <button
             onClick={onOpenSettings}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-stone-800/50 border border-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-700/50 transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium bg-surface-overlay border border-border text-content-muted hover:text-content-secondary hover:bg-surface-overlay transition-all"
             title="Manage sources"
           >
             <Settings className="w-3 h-3" />
@@ -199,22 +204,23 @@ export default function Sidebar({
           </button>
           <button
             onClick={onOpenHistory}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-stone-800/50 border border-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-700/50 transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium bg-surface-overlay border border-border text-content-muted hover:text-content-secondary hover:bg-surface-overlay transition-all"
             title="Search topic history"
           >
             <History className="w-3 h-3" />
             History
           </button>
+          <ThemeToggle resolvedTheme={resolvedTheme} onToggle={onToggleTheme} />
         </div>
 
         {/* Source sections */}
         <div className="space-y-4">
           {/* AI News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
               <Rss className="w-3 h-3" />
               AI News
-              <span className="ml-auto text-stone-600">{aiRssCount}</span>
+              <span className="ml-auto text-content-faint">{aiRssCount}</span>
             </h3>
             <div className="space-y-0.5">
               {RSS_SOURCES.filter(
@@ -222,7 +228,7 @@ export default function Sidebar({
               ).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-xs text-content-secondary hover:bg-surface-overlay transition-colors"
                 >
                   <span
                     className="w-5 text-center text-[10px] font-bold"
@@ -231,7 +237,7 @@ export default function Sidebar({
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-stone-600 text-[10px]">
+                  <span className="text-content-faint text-[11px]">
                     {isFiltering
                       ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
                       : sourceCounts.get(source.name) || 0}
@@ -243,10 +249,10 @@ export default function Sidebar({
 
           {/* Gaming News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
               <Rss className="w-3 h-3" />
               Gaming
-              <span className="ml-auto text-stone-600">{gamingRssCount}</span>
+              <span className="ml-auto text-content-faint">{gamingRssCount}</span>
             </h3>
             <div className="space-y-0.5">
               {RSS_SOURCES.filter(
@@ -254,7 +260,7 @@ export default function Sidebar({
               ).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-xs text-content-secondary hover:bg-surface-overlay transition-colors"
                 >
                   <span
                     className="w-5 text-center text-[10px] font-bold"
@@ -263,7 +269,7 @@ export default function Sidebar({
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-stone-600 text-[10px]">
+                  <span className="text-content-faint text-[11px]">
                     {isFiltering
                       ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
                       : sourceCounts.get(source.name) || 0}
@@ -275,22 +281,22 @@ export default function Sidebar({
 
           {/* Reddit */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               Reddit
-              <span className="ml-auto text-stone-600">{redditCount}</span>
+              <span className="ml-auto text-content-faint">{redditCount}</span>
             </h3>
             <div className="space-y-0.5">
               {REDDIT_SOURCES.filter((s) => s.enabled).map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-stone-400 hover:bg-surface-overlay transition-colors"
+                  className="flex items-center gap-2 px-2 py-1 rounded text-xs text-content-secondary hover:bg-surface-overlay transition-colors"
                 >
                   <span className="w-5 text-center text-[10px]">
                     {source.icon}
                   </span>
                   <span className="flex-1 truncate">{source.name}</span>
-                  <span className="text-stone-600 text-[10px]">
+                  <span className="text-content-faint text-[11px]">
                     {isFiltering
                       ? `${filteredSourceCounts.get(source.name) || 0}/${sourceCounts.get(source.name) || 0}`
                       : sourceCounts.get(source.name) || 0}
@@ -302,20 +308,20 @@ export default function Sidebar({
 
           {/* Hacker News */}
           <section>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               Hacker News
-              <span className="ml-auto text-stone-600">{hnCount}</span>
+              <span className="ml-auto text-content-faint">{hnCount}</span>
             </h3>
           </section>
 
           {/* Bluesky */}
           {blueskyCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
                 <Globe className="w-3 h-3" />
                 Bluesky
-                <span className="ml-auto text-stone-600">{blueskyCount}</span>
+                <span className="ml-auto text-content-faint">{blueskyCount}</span>
               </h3>
             </section>
           )}
@@ -323,10 +329,10 @@ export default function Sidebar({
           {/* GitHub Trending */}
           {githubCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
                 <Github className="w-3 h-3" />
                 GitHub Trending
-                <span className="ml-auto text-stone-600">{githubCount}</span>
+                <span className="ml-auto text-content-faint">{githubCount}</span>
               </h3>
             </section>
           )}
@@ -334,19 +340,19 @@ export default function Sidebar({
           {/* Steam News */}
           {steamCount > 0 && (
             <section>
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-2 flex items-center gap-1.5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted mb-2 flex items-center gap-1.5">
                 <Gamepad2 className="w-3 h-3" />
                 Steam News
-                <span className="ml-auto text-stone-600">{steamCount}</span>
+                <span className="ml-auto text-content-faint">{steamCount}</span>
               </h3>
             </section>
           )}
         </div>
 
         {/* Keyboard hint */}
-        <div className="mt-6 pt-4 border-t border-stone-700/60">
-          <p className="text-[10px] text-stone-600 text-center">
-            Press <kbd className="px-1 py-0.5 rounded bg-stone-800 text-stone-400 font-mono text-[9px]">?</kbd> for keyboard shortcuts
+        <div className="mt-6 pt-4 border-t border-border">
+          <p className="text-[11px] text-content-muted text-center">
+            Press <kbd className="px-1 py-0.5 rounded bg-surface-overlay text-content-secondary font-mono text-[10px]">?</kbd> for keyboard shortcuts
           </p>
         </div>
       </div>

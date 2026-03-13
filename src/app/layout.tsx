@@ -13,13 +13,26 @@ export const metadata: Metadata = {
   },
 };
 
+const THEME_SCRIPT = `
+(function() {
+  try {
+    var t = localStorage.getItem('pulsefeed_theme_v1');
+    var dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
   );

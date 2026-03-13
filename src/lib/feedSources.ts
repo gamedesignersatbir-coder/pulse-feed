@@ -134,6 +134,16 @@ export const RSS_SOURCES: FeedSourceConfig[] = [
     color: "#06b6d4",
     enabled: true,
   },
+  {
+    id: "twiv",
+    name: "This Week in Videogames",
+    url: "https://thisweekinvideogames.com/feed/",
+    type: "rss",
+    category: "gaming",
+    icon: "TWIV",
+    color: "#f472b6",
+    enabled: true,
+  },
 
   // ── General Tech ──
   {
